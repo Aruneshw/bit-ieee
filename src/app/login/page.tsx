@@ -34,6 +34,7 @@ function LoginForm() {
   const ADMIN_EMAILS = [
     "bitieeehubadmin1@gmail.com",
     "bitieeehubadmin2@gmail.com",
+    "aruneshownsty1@gmail.com",
     "bitieeehubadmin3@gmail.com",
     "bitieeehubadmin4@gmail.com",
   ];

@@ -184,7 +184,7 @@ export const SKILL_OPTIONS = [
 
 // Role hierarchy helpers
 export const ADMIN_ROLES: UserRole[] = ['admin_primary', 'admin_secondary']
-export const ADMIN_PRIMARY_EMAILS = ['bitieeehubadmin1@gmail.com', 'bitieeehubadmin2@gmail.com']
+export const ADMIN_PRIMARY_EMAILS = ['bitieeehubadmin1@gmail.com', 'bitieeehubadmin2@gmail.com', 'aruneshownsty1@gmail.com']
 export const ADMIN_SECONDARY_EMAILS = ['bitieeehubadmin3@gmail.com', 'bitieeehubadmin4@gmail.com']
 export const ALL_ADMIN_EMAILS = [...ADMIN_PRIMARY_EMAILS, ...ADMIN_SECONDARY_EMAILS]
 

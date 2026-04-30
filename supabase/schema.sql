@@ -340,11 +340,11 @@ BEGIN
     WHERE email = NEW.email;
   ELSE
     -- No pre-populated row. Check domain before proceeding.
-    IF NEW.email NOT LIKE '%@bitsathy.ac.in' AND NEW.email NOT IN ('bitieeehubadmin1@gmail.com', 'bitieeehubadmin2@gmail.com', 'bitieeehubadmin3@gmail.com', 'bitieeehubadmin4@gmail.com') THEN
+    IF NEW.email NOT LIKE '%@bitsathy.ac.in' AND NEW.email NOT IN ('bitieeehubadmin1@gmail.com', 'bitieeehubadmin2@gmail.com', 'aruneshownsty1@gmail.com', 'bitieeehubadmin3@gmail.com', 'bitieeehubadmin4@gmail.com') THEN
       RAISE EXCEPTION 'invalid user';
     END IF;
 
-    IF NEW.email IN ('bitieeehubadmin1@gmail.com', 'bitieeehubadmin2@gmail.com') THEN
+    IF NEW.email IN ('bitieeehubadmin1@gmail.com', 'bitieeehubadmin2@gmail.com', 'aruneshownsty1@gmail.com') THEN
       user_role := 'admin_primary';
     ELSIF NEW.email IN ('bitieeehubadmin3@gmail.com', 'bitieeehubadmin4@gmail.com') THEN
       user_role := 'admin_secondary';
