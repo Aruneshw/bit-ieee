@@ -75,6 +75,7 @@ function LoginForm() {
           redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: {
             hd: ALLOWED_DOMAIN,
+            prompt: "select_account",
           },
         },
       });
