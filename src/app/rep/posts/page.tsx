@@ -21,24 +21,30 @@ export default function RepPostsPage() {
       if (user?.email) {
         setUserId(user.id);
         const { data: profile } = await supabase.from("users").select("society_id").eq("email", user.email.toLowerCase()).single();
-        if (profile?.society_id) {
-          setSocietyId(profile.society_id);
-          fetchPosts(profile.society_id);
-        }
+        const sid = profile?.society_id || "";
+        setSocietyId(sid);
+        fetchPosts(sid);
       }
     }
     init();
   }, []);
 
   async function fetchPosts(sid: string) {
-    const { data } = await supabase
+    let query = supabase
       .from("posts")
-      .select("*, author:users(name, email, avatar_url), interactions:post_interactions(id, type, user_id, comment_text, user:users(name))")
-      .or(`society_id.eq.${sid},society_id.is.null`)
-      .order("created_at", { ascending: false });
+      .select("*, author:users(name, email, avatar_url), interactions:post_interactions(id, type, user_id, comment_text, user:users(name))");
+    
+    if (sid) {
+      query = query.or(`society_id.eq.${sid},society_id.is.null`);
+    } else {
+      query = query.is("society_id", null);
+    }
+
+    const { data } = await query.order("created_at", { ascending: false });
     setPosts(data || []);
     setLoading(false);
   }
+
 
 
   async function createPost(e: React.FormEvent) {
