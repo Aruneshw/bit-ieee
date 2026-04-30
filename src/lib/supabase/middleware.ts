@@ -31,24 +31,21 @@ export async function updateSession(request: NextRequest) {
       }
     )
 
+    const path = request.nextUrl.pathname
+
+    // Public routes that should not ask Supabase for a session.
+    if (path === '/' || path.startsWith('/auth/')) {
+      return supabaseResponse
+    }
+
     const { data: { user }, error } = await supabase.auth.getUser()
 
-    if (error) {
+    if (error && error.message !== 'Auth session missing!') {
       console.error('Supabase middleware auth error:', error.message)
     }
 
-    const path = request.nextUrl.pathname
-
-    // Public routes that don't need auth at all
-    const publicRoutes = ['/', '/login', '/auth/callback']
-    const isPublicRoute = publicRoutes.some(r => path === r || path.startsWith('/auth/'))
-
-    // Routes that need auth but NOT profile completion
-    const authOnlyRoutes = ['/profile-setup', '/dashboard']
-    const isAuthOnlyRoute = authOnlyRoutes.some(r => path === r || path.startsWith(r + '/'))
-
     // Not logged in → redirect to login (unless public)
-    if (!user && !isPublicRoute) {
+    if (!user && path !== '/login') {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       return NextResponse.redirect(url)

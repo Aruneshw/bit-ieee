@@ -15,9 +15,9 @@ export default function LeadershipDashboard() {
   useEffect(() => {
     async function fetch() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.email) return;
       
-      const { data: profile } = await supabase.from("users").select("activity_points").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("users").select("activity_points").eq("email", user.email.toLowerCase()).single();
       setTotalPoints(profile?.activity_points || 0);
 
       const [eventsRes, pointsRes] = await Promise.all([

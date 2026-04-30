@@ -30,8 +30,8 @@ export default function AdminDashboard() {
     async function fetchData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
+        if (user?.email) {
+          const { data: profile } = await supabase.from("users").select("role").eq("email", user.email.toLowerCase()).single();
           setUserRole(profile?.role || "");
         }
 

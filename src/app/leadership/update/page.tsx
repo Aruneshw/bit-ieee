@@ -114,14 +114,26 @@ function ResumePreview() {
   useEffect(() => {
     async function fetch() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.email) return;
 
-      const [profileRes, resumeRes] = await Promise.all([
-        supabase.from("users").select("*, society:societies(name)").eq("id", user.id).single(),
-        supabase.from("resumes").select("*").eq("user_id", user.id).single(),
-      ]);
+      const { data: profile } = await supabase
+        .from("users")
+        .select("*, society:societies(name)")
+        .eq("email", user.email.toLowerCase())
+        .single();
 
-      setData({ user: profileRes.data, resume: resumeRes.data });
+      if (!profile) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: resume } = await supabase
+        .from("resumes")
+        .select("*")
+        .eq("user_id", profile.id)
+        .single();
+
+      setData({ user: profile, resume });
       setLoading(false);
     }
     fetch();

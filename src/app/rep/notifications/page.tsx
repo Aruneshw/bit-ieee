@@ -16,7 +16,9 @@ export default function RepNotificationsPage() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase.from("users").select("society_id").eq("id", user?.id).single();
+      if (!user?.email) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase.from("users").select("society_id").eq("email", user.email.toLowerCase()).single();
 
       const { error } = await supabase.from("notifications").insert({
         title: fd.get("title"),

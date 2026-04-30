@@ -89,7 +89,7 @@ export default function ProfileSetupPage() {
       const { data: profile } = await supabase
         .from("users")
         .select("*, society:societies(name, abbreviation)")
-        .eq("email", user.email)
+        .eq("email", user.email.toLowerCase())
         .single();
 
       if (!profile) {
@@ -105,7 +105,7 @@ export default function ProfileSetupPage() {
         return;
       }
 
-      setCollegeEmail(user.email);
+      setCollegeEmail(user.email.toLowerCase());
       setSocietyName(
         profile.society
           ? `${(profile.society as any).abbreviation} — ${(profile.society as any).name}`
@@ -150,7 +150,7 @@ export default function ProfileSetupPage() {
           profile_completed: true,
           updated_at: new Date().toISOString(),
         })
-        .eq("email", user.email);
+        .eq("email", user.email.toLowerCase());
 
       if (updateErr) throw updateErr;
 
@@ -158,7 +158,7 @@ export default function ProfileSetupPage() {
       const { data: dbUser } = await supabase
         .from("users")
         .select("id")
-        .eq("email", user.email)
+        .eq("email", user.email.toLowerCase())
         .single();
 
       if (!dbUser) throw new Error("User row not found after update");

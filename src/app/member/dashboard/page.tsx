@@ -13,9 +13,9 @@ export default function MemberDashboard() {
   useEffect(() => {
     async function fetch() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.email) return;
 
-      const { data: profile } = await supabase.from("users").select("activity_points").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("users").select("activity_points").eq("email", user.email.toLowerCase()).single();
       setTotalPoints(profile?.activity_points || 0);
 
       const { data: pts } = await supabase.from("activity_points").select("*").eq("user_id", user.id).order("created_at", { ascending: false });

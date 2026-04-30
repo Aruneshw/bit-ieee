@@ -17,8 +17,8 @@ export default function ManagePage() {
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase.from("users").select("role").eq("id", user.id).single();
+      if (user?.email) {
+        const { data } = await supabase.from("users").select("role").eq("email", user.email.toLowerCase()).single();
         setUserRole(data?.role || "");
       }
       const { data: socs } = await supabase.from("societies").select("id, name, abbreviation").order("name");

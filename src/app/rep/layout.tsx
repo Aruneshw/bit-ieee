@@ -6,9 +6,9 @@ import type { UserProfile } from "@/lib/types";
 export default async function RepLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user?.email) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("*").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("*").eq("email", user.email.toLowerCase()).single();
   if (!profile || profile.role !== "student_rep") redirect("/dashboard");
 
   return (

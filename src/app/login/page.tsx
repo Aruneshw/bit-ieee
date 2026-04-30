@@ -1,13 +1,23 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Zap, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { getRoleDashboardPath } from "@/lib/types";
+import { getRoleDashboardPath, needsProfileCompletion } from "@/lib/types";
 import type { UserRole } from "@/lib/types";
+
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  unauthorized_domain: "Only @bitsathy.ac.in email addresses are allowed.",
+  not_registered: "Your account is not registered. Contact your IEEE admin.",
+  auth_failed: "Authentication failed. Please try again.",
+};
+
+function getAuthErrorMessage(error: string | null) {
+  return error ? AUTH_ERROR_MESSAGES[error] ?? "Authentication failed. Please try again." : "";
+}
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -15,8 +25,8 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState("");
   const searchParams = useSearchParams();
+  const [error, setError] = useState(() => getAuthErrorMessage(searchParams.get("error")));
 
   const supabase = createClient();
 
@@ -28,20 +38,9 @@ function LoginForm() {
     "bitieeehubadmin4@gmail.com",
   ];
 
-  // Show error from URL params (e.g. redirected from auth callback)
-  useEffect(() => {
-    const urlError = searchParams.get("error");
-    if (urlError === "unauthorized_domain") {
-      setError("Only @bitsathy.ac.in email addresses are allowed.");
-    } else if (urlError === "not_registered") {
-      setError("Your account is not registered. Contact your IEEE admin.");
-    } else if (urlError === "auth_failed") {
-      setError("Authentication failed. Please try again.");
-    }
-  }, [searchParams]);
-
   function validateEmail(email: string): boolean {
-    return email.endsWith(`@${ALLOWED_DOMAIN}`) || ADMIN_EMAILS.includes(email);
+    const normalizedEmail = email.toLowerCase();
+    return normalizedEmail.endsWith(`@${ALLOWED_DOMAIN}`) || ADMIN_EMAILS.includes(normalizedEmail);
   }
 
   /**
@@ -52,7 +51,7 @@ function LoginForm() {
     const { data: profile, error: dbError } = await supabase
       .from("users")
       .select("role, society_id, profile_completed")
-      .eq("email", userEmail)
+      .eq("email", userEmail.toLowerCase())
       .single();
 
     if (dbError || !profile) {
@@ -62,13 +61,15 @@ function LoginForm() {
       return;
     }
 
-    if (!profile.profile_completed) {
+    const role = profile.role as UserRole;
+
+    if (needsProfileCompletion(role) && !profile.profile_completed) {
       window.location.href = "/profile-setup";
       return;
     }
 
     // Profile complete → go to role-specific dashboard
-    window.location.href = getRoleDashboardPath(profile.role as UserRole);
+    window.location.href = getRoleDashboardPath(role);
   }
 
   async function handleGoogleLogin() {

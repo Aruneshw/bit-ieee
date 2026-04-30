@@ -230,7 +230,7 @@ export function getRoleDashboardPath(role: UserRole): string {
     case 'admin_secondary': return '/admin/dashboard'
     case 'student_rep': return '/rep/dashboard'
     case 'leadership': return '/leadership/dashboard'
-    case 'event_manager': return '/events/dashboard'
+    case 'event_manager': return '/leadership/dashboard'
     case 'membership': return '/member/dashboard'
     default: return '/member/dashboard'
   }

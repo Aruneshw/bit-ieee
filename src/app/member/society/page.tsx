@@ -14,9 +14,9 @@ export default function MemberSocietyPage() {
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (user?.email) {
         setUserId(user.id);
-        const { data: profile } = await supabase.from("users").select("society_id").eq("id", user.id).single();
+        const { data: profile } = await supabase.from("users").select("society_id").eq("email", user.email.toLowerCase()).single();
         if (profile?.society_id) {
           setSocietyId(profile.society_id);
           fetchPosts(profile.society_id);

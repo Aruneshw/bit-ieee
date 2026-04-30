@@ -16,8 +16,8 @@ export default function EventRequestPage() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-      const { data: profile } = await supabase.from("users").select("society_id, name").eq("id", user.id).single();
+      if (!user?.email) throw new Error("Not authenticated");
+      const { data: profile } = await supabase.from("users").select("society_id, name").eq("email", user.email.toLowerCase()).single();
 
       const { error } = await supabase.from("events").insert({
         name: fd.get("name"),

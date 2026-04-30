@@ -12,8 +12,8 @@ export default function RepDashboard() {
   useEffect(() => {
     async function fetch() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase.from("users").select("society_id").eq("id", user.id).single();
+      if (!user?.email) return;
+      const { data: profile } = await supabase.from("users").select("society_id").eq("email", user.email.toLowerCase()).single();
       if (!profile?.society_id) { setLoading(false); return; }
 
       const [membersRes, eventsRes, usersRes] = await Promise.all([

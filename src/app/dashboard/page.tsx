@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getRoleDashboardPath } from '@/lib/types'
+import { getRoleDashboardPath, needsProfileCompletion } from '@/lib/types'
 import type { UserRole } from '@/lib/types'
 
 export default async function DashboardRedirect() {
@@ -13,15 +13,17 @@ export default async function DashboardRedirect() {
   const { data: profile } = await supabase
     .from('users')
     .select('role, profile_completed')
-    .eq('email', user.email)
+    .eq('email', user.email.toLowerCase())
     .single()
 
   if (!profile) redirect('/login?error=not_registered')
 
-  // Check profile completion
-  if (!profile.profile_completed) {
+  const role = profile.role as UserRole
+
+  // Check profile completion only for roles that need the setup form
+  if (needsProfileCompletion(role) && !profile.profile_completed) {
     redirect('/profile-setup')
   }
 
-  redirect(getRoleDashboardPath(profile.role as UserRole))
+  redirect(getRoleDashboardPath(role))
 }

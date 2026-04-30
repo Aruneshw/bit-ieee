@@ -14,8 +14,8 @@ export default function SpreadsheetsPage() {
   useEffect(() => {
     async function checkRole() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase.from("users").select("role").eq("id", user.id).single();
+      if (user?.email) {
+        const { data } = await supabase.from("users").select("role").eq("email", user.email.toLowerCase()).single();
         setUserRole(data?.role || "");
       }
       setLoading(false);

@@ -37,7 +37,7 @@ export function useRole(): UseRoleReturn {
         const { data: profile, error: dbError } = await supabase
           .from("users")
           .select("*, society:societies(id, name, abbreviation, department)")
-          .eq("email", authUser.email)
+          .eq("email", authUser.email.toLowerCase())
           .single();
 
         if (dbError || !profile) {

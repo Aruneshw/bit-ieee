@@ -7,12 +7,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user?.email) redirect("/login");
 
   const { data: profile } = await supabase
     .from("users")
     .select("*")
-    .eq("id", user.id)
+    .eq("email", user.email.toLowerCase())
     .single();
 
   if (!profile || !["admin_primary", "admin_secondary"].includes(profile.role)) {
