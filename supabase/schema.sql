@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS events (
   short_description TEXT,
   detailed_description TEXT,
   society_id UUID REFERENCES societies(id) ON DELETE CASCADE,
-  organiser_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  organiser_id UUID REFERENCES users(id) ON DELETE CASCADE,
   organizer_name TEXT,
   organizer_department TEXT,
   skill_type TEXT CHECK (skill_type IN ('primary','secondary')),
@@ -80,6 +80,9 @@ CREATE TABLE IF NOT EXISTS events (
   current_bookings INT DEFAULT 0,
   attendance_type TEXT DEFAULT 'otp',
   admin_notes TEXT,
+  is_ieee_official BOOLEAN DEFAULT false,
+  external_reference_id TEXT UNIQUE,
+  external_url TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

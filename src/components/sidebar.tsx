@@ -21,6 +21,7 @@ interface NavItem {
 
 const adminNav: NavItem[] = [
   { href: "/admin/dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard" },
+  { href: "/admin/calendar", icon: <CalendarDays className="w-5 h-5" />, label: "Global Calendar" },
   { href: "/admin/event-requests", icon: <CalendarDays className="w-5 h-5" />, label: "Event Requests" },
   { href: "/admin/events", icon: <BookOpen className="w-5 h-5" />, label: "All Events" },
   { href: "/admin/attendance", icon: <CheckSquare className="w-5 h-5" />, label: "Attendance" },
@@ -34,12 +35,14 @@ const adminNav: NavItem[] = [
 
 const repNav: NavItem[] = [
   { href: "/rep/dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard" },
+  { href: "/rep/calendar", icon: <CalendarDays className="w-5 h-5" />, label: "Global Calendar" },
   { href: "/rep/posts", icon: <Megaphone className="w-5 h-5" />, label: "Society Posts" },
   { href: "/rep/notifications", icon: <Bell className="w-5 h-5" />, label: "Send Notification" },
 ];
 
 const leadershipNav: NavItem[] = [
   { href: "/leadership/dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard" },
+  { href: "/leadership/calendar", icon: <CalendarDays className="w-5 h-5" />, label: "Global Calendar" },
   { href: "/leadership/society", icon: <Users className="w-5 h-5" />, label: "Society" },
   { href: "/leadership/event", icon: <CalendarDays className="w-5 h-5" />, label: "Event" },
   { href: "/leadership/bookings", icon: <BookOpen className="w-5 h-5" />, label: "Book Events" },
@@ -49,6 +52,7 @@ const leadershipNav: NavItem[] = [
 
 const memberNav: NavItem[] = [
   { href: "/member/dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard" },
+  { href: "/member/calendar", icon: <CalendarDays className="w-5 h-5" />, label: "Global Calendar" },
   { href: "/member/activity", icon: <Activity className="w-5 h-5" />, label: "Activity" },
   { href: "/member/bookings", icon: <BookOpen className="w-5 h-5" />, label: "Book Events" },
   { href: "/member/my-bookings", icon: <CalendarDays className="w-5 h-5" />, label: "My Bookings" },

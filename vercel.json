@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync-ieee-events",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
