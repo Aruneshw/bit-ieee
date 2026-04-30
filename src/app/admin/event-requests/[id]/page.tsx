@@ -164,7 +164,6 @@ export default function AdminReviewEventPage() {
 
   async function approve() {
     if (!event) return;
-    if (!venue.trim()) return;
     const ok = window.confirm("Approve this event? It will immediately become visible to all members.");
     if (!ok) return;
     setSaving(true);
@@ -172,7 +171,7 @@ export default function AdminReviewEventPage() {
       await saveChanges();
       const { error } = await supabase
         .from("events")
-        .update({ status: "approved", venue: venue.trim() })
+        .update({ status: "approved", venue: venue.trim() || null })
         .eq("id", event.id);
       if (error) throw error;
       toast.success("Event approved");

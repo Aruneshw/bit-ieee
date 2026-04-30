@@ -198,9 +198,25 @@ export function AdminEventDetailEditor({ eventId, initialEvent }: { eventId: str
 
       <div className="glass-card p-6 space-y-4">
         <p className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Edit</p>
-        <Field label="Title">
-          <input className="input-field" value={event.name || ""} onChange={(e) => setEvent({ ...event, name: e.target.value })} />
-        </Field>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Title">
+            <input className="input-field" value={event.name || ""} onChange={(e) => setEvent({ ...event, name: e.target.value })} />
+          </Field>
+          <Field label="Status">
+            <select 
+              className="input-field" 
+              value={event.status || "pending"} 
+              onChange={(e) => setEvent({ ...event, status: e.target.value })}
+            >
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected (Revoke)</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+            </select>
+          </Field>
+        </div>
         <Field label="Short Description">
           <textarea rows={4} className="input-field resize-none" value={event.short_description || ""} onChange={(e) => setEvent({ ...event, short_description: e.target.value })} />
         </Field>
