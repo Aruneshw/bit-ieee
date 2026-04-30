@@ -517,7 +517,7 @@ function EventDrawer({ event, onClose }: { event: EventRow | null; onClose: () =
 
   return (
     <div
-      className="fixed inset-0 z-50 pointer-events-none"
+      className="fixed inset-0 z-50 pointer-events-none overflow-hidden"
       aria-hidden={!open}
     >
       {/* overlay */}
