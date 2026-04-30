@@ -31,10 +31,11 @@ export default function MemberSocietyPage() {
     const { data } = await supabase
       .from("posts")
       .select("*, author:users(name), interactions:post_interactions(id, type, user_id, comment_text, user:users(name))")
-      .eq("society_id", sid)
+      .or(`society_id.eq.${sid},society_id.is.null`)
       .order("created_at", { ascending: false });
     setPosts(data || []);
   }
+
 
   async function likePost(postId: string) {
     const post = posts.find(p => p.id === postId);
@@ -59,8 +60,9 @@ export default function MemberSocietyPage() {
     <div className="space-y-6 animate-slide-up max-w-3xl mx-auto">
       <div>
         <h1 className="text-4xl font-heading tracking-wide mb-2">Society Feed</h1>
-        <p className="text-gray-400">Posts and updates from your Student Representative.</p>
+        <p className="text-gray-400">Updates from your Student Representative and Global Admin Announcements.</p>
       </div>
+
 
       {posts.length === 0 ? (
         <div className="glass-card p-12 text-center">

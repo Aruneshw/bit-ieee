@@ -191,20 +191,39 @@ function AnnouncementForm() {
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
+    const title = fd.get("title") as string;
+    const content = fd.get("content") as string;
+    const mediaUrl = fd.get("media_url") as string;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { error } = await supabase.from("notifications").insert({
-        title: fd.get("title"),
-        message: fd.get("content"),
+      // 1. Send as notification
+      await supabase.from("notifications").insert({
+        title,
+        message: content,
         type: "announcement",
         sent_by: user?.id,
         recipient_role: "all",
       });
 
-      if (error) throw error;
-      toast.success("Announcement broadcasted to all users!");
+      // 2. Also post to the Global Feed (society_id = NULL)
+      const { error: postError } = await supabase.from("posts").insert({
+        content: `[Announcement: ${title}]\n\n${content}`,
+        media_url: mediaUrl || null,
+        author_id: user?.id,
+        society_id: null, // Global post
+      });
+
+      if (postError) {
+        console.error("Post error:", postError);
+        // We don't throw here so the notification still goes through, 
+        // but we warn the user if the migration hasn't been run yet.
+        toast.warning("Notification sent, but failed to post to feed. Ensure you have run the SQL migration.");
+      } else {
+        toast.success("Announcement broadcasted and posted to feed!");
+      }
+      
       (e.target as HTMLFormElement).reset();
     } catch (err: any) {
       toast.error(err.message || "Failed to broadcast");
@@ -224,9 +243,14 @@ function AnnouncementForm() {
         <label className="block text-sm text-gray-400 mb-1.5">Message *</label>
         <textarea name="content" required rows={4} className="input-field resize-none" placeholder="Type your announcement..." />
       </div>
+      <div>
+        <label className="block text-sm text-gray-400 mb-1.5">Media URL (Optional)</label>
+        <input name="media_url" className="input-field" placeholder="https://example.com/image.jpg" />
+      </div>
       <button type="submit" disabled={loading} className="btn-primary">
         {loading ? "Broadcasting..." : "Send Announcement"}
       </button>
     </form>
   );
 }
+

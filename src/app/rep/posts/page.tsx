@@ -34,11 +34,12 @@ export default function RepPostsPage() {
     const { data } = await supabase
       .from("posts")
       .select("*, author:users(name, email, avatar_url), interactions:post_interactions(id, type, user_id, comment_text, user:users(name))")
-      .eq("society_id", sid)
+      .or(`society_id.eq.${sid},society_id.is.null`)
       .order("created_at", { ascending: false });
     setPosts(data || []);
     setLoading(false);
   }
+
 
   async function createPost(e: React.FormEvent) {
     e.preventDefault();
