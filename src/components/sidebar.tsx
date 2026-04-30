@@ -8,7 +8,7 @@ import { getRoleLabel, getRoleColor, type UserRole, type UserProfile } from "@/l
 import {
   LayoutDashboard, Users, UserPlus, Activity, Bell, CheckSquare,
   CalendarDays, FileText, Megaphone, LogOut, Table,
-  ChevronLeft, ChevronRight, Zap, Settings, BookOpen, Info,
+  ChevronLeft, ChevronRight, Zap, Settings, BookOpen, Info, MessageSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ const adminNav: NavItem[] = [
   { href: "/admin/calendar", icon: <CalendarDays className="w-5 h-5" />, label: "Global Calendar" },
   { href: "/admin/event-requests", icon: <CalendarDays className="w-5 h-5" />, label: "Event Requests" },
   { href: "/admin/events", icon: <BookOpen className="w-5 h-5" />, label: "All Events" },
+  { href: "/admin/posts", icon: <MessageSquare className="w-5 h-5" />, label: "Manage Posts" },
   { href: "/admin/attendance", icon: <CheckSquare className="w-5 h-5" />, label: "Attendance" },
   { href: "/admin/society", icon: <Users className="w-5 h-5" />, label: "Society" },
   { href: "/admin/manage", icon: <UserPlus className="w-5 h-5" />, label: "Manage" },
