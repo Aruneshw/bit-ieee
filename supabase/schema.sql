@@ -235,17 +235,22 @@ ALTER TABLE post_interactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resumes ENABLE ROW LEVEL SECURITY;
 
--- ── Drop ALL existing policies first (safe if already gone) ──
+-- ── Drop ONLY our policies on managed tables (safe if already gone) ──
 DO $$
 DECLARE
   pol RECORD;
+  managed_tables TEXT[] := ARRAY['societies','users','events','activity_points','tasks','task_submissions','event_bookings','posts','post_interactions','notifications','resumes'];
+  t TEXT;
 BEGIN
-  FOR pol IN
-    SELECT schemaname, tablename, policyname
-    FROM pg_policies
-    WHERE schemaname = 'public'
+  FOR t IN SELECT unnest(managed_tables)
   LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', pol.policyname, pol.schemaname, pol.tablename);
+    FOR pol IN
+      SELECT policyname
+      FROM pg_policies
+      WHERE schemaname = 'public' AND tablename = t
+    LOOP
+      EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', pol.policyname, t);
+    END LOOP;
   END LOOP;
 END $$;
 
