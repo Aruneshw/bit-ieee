@@ -254,47 +254,70 @@ BEGIN
   END LOOP;
 END $$;
 
--- ── Recreate policies (admin_primary only, no admin_secondary) ──
+-- ── SECURITY DEFINER helper functions (bypass RLS for policy checks) ──
+-- These prevent infinite recursion when users-table policies sub-query users.
+
+CREATE OR REPLACE FUNCTION public.get_my_role()
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT role FROM public.users WHERE id = auth.uid();
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_my_society_id()
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT society_id FROM public.users WHERE id = auth.uid();
+$$;
+
+-- ── Recreate policies (using helper functions to avoid recursion) ──
 
 -- Societies
 CREATE POLICY "Societies are viewable by everyone" ON societies FOR SELECT USING (true);
 CREATE POLICY "Only admins can modify societies" ON societies FOR ALL USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin_primary')
+  public.get_my_role() = 'admin_primary'
 );
 
--- Users
+-- Users (NO sub-queries on users — use helper functions or auth.uid() directly)
 CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (id = auth.uid());
 CREATE POLICY "Admins can view all users" ON users FOR SELECT USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin_primary')
+  public.get_my_role() = 'admin_primary'
 );
 CREATE POLICY "Same society users are visible" ON users FOR SELECT USING (
-  society_id IN (SELECT society_id FROM users WHERE id = auth.uid())
+  society_id = public.get_my_society_id()
 );
 CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (id = auth.uid());
 CREATE POLICY "Admins can manage all users" ON users FOR ALL USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin_primary')
+  public.get_my_role() = 'admin_primary'
 );
 
 -- Events
 CREATE POLICY "Admins can manage all events" ON events FOR ALL USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin_primary')
+  public.get_my_role() = 'admin_primary'
 );
 CREATE POLICY "Society members can view their events" ON events FOR SELECT USING (
-  society_id IN (SELECT society_id FROM users WHERE id = auth.uid())
+  society_id = public.get_my_society_id()
 );
 CREATE POLICY "Leadership can create events" ON events FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('leadership','event_manager'))
+  public.get_my_role() IN ('leadership','event_manager')
 );
 
 -- Activity Points
 CREATE POLICY "Users view own points" ON activity_points FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY "Admins manage all points" ON activity_points FOR ALL USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin_primary')
+  public.get_my_role() = 'admin_primary'
 );
 
 -- Tasks
 CREATE POLICY "Admins manage tasks" ON tasks FOR ALL USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('admin_primary','leadership','event_manager'))
+  public.get_my_role() IN ('admin_primary','leadership','event_manager')
 );
 CREATE POLICY "Booked users see tasks" ON tasks FOR SELECT USING (
   EXISTS (SELECT 1 FROM event_bookings WHERE event_id = tasks.event_id AND user_id = auth.uid())
@@ -303,45 +326,45 @@ CREATE POLICY "Booked users see tasks" ON tasks FOR SELECT USING (
 -- Task Submissions
 CREATE POLICY "Users manage own submissions" ON task_submissions FOR ALL USING (user_id = auth.uid());
 CREATE POLICY "Admins view all submissions" ON task_submissions FOR SELECT USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('admin_primary','leadership'))
+  public.get_my_role() IN ('admin_primary','leadership')
 );
 
 -- Event Bookings
 CREATE POLICY "Users manage own bookings" ON event_bookings FOR ALL USING (user_id = auth.uid());
 CREATE POLICY "Admins manage bookings" ON event_bookings FOR ALL USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin_primary')
+  public.get_my_role() = 'admin_primary'
 );
 
 -- Posts
 CREATE POLICY "Society members see posts" ON posts FOR SELECT USING (
-  society_id IN (SELECT society_id FROM users WHERE id = auth.uid())
-  OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin_primary')
+  society_id = public.get_my_society_id()
+  OR public.get_my_role() = 'admin_primary'
 );
 CREATE POLICY "Reps and admins create posts" ON posts FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('student_rep','admin_primary'))
+  public.get_my_role() IN ('student_rep','admin_primary')
 );
 CREATE POLICY "Authors manage own posts" ON posts FOR UPDATE USING (author_id = auth.uid());
 
 -- Post Interactions
 CREATE POLICY "Users interact with visible posts" ON post_interactions FOR ALL USING (
   EXISTS (SELECT 1 FROM posts WHERE id = post_interactions.post_id
-    AND society_id IN (SELECT society_id FROM users WHERE id = auth.uid()))
+    AND society_id = public.get_my_society_id())
 );
 
 -- Notifications
 CREATE POLICY "Users see own notifications" ON notifications FOR SELECT USING (
   recipient_id = auth.uid()
-  OR society_id IN (SELECT society_id FROM users WHERE id = auth.uid())
-  OR recipient_role IN (SELECT role FROM users WHERE id = auth.uid())
+  OR society_id = public.get_my_society_id()
+  OR recipient_role = public.get_my_role()
 );
 CREATE POLICY "Authorized users create notifications" ON notifications FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('admin_primary','student_rep','leadership'))
+  public.get_my_role() IN ('admin_primary','student_rep','leadership')
 );
 
 -- Resumes
 CREATE POLICY "Users manage own resume" ON resumes FOR ALL USING (user_id = auth.uid());
 CREATE POLICY "Admins view resumes" ON resumes FOR SELECT USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin_primary')
+  public.get_my_role() = 'admin_primary'
 );
 
 -- ============================================
