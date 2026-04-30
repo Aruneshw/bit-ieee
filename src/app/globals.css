@@ -14,19 +14,63 @@
 }
 
 @layer base {
-  :root {
-    --background: #0a1628;
-    --foreground: #f8fafc;
-    --card: rgba(255, 255, 255, 0.02);
-    --card-border: rgba(255, 255, 255, 0.08);
-    --muted: #94a3b8;
-    --accent: #00629B;
-    --accent-light: #00bfff;
+  /* =========================================================
+   * IEEE Hub Theme Tokens (Light/Dark)
+   * Use ONLY these variables for new UI (no hardcoded colors).
+   * ========================================================= */
+  :root,
+  [data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f4f6f9;
+    --bg-card: #ffffff;
+    --bg-sidebar: #1a1f36;
+    --border: #e2e8f0;
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --accent-primary: #2563eb;
+    --accent-secondary: #1e40af;
+    --accent-gold: #f59e0b;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --shadow: rgba(0, 0, 0, 0.08);
+    --radius-card: 12px;
+    --radius-button: 8px;
+    --radius-input: 8px;
+    --radius-badge: 999px;
+  }
+
+  [data-theme="dark"] {
+    --bg-primary: #0f1117;
+    --bg-secondary: #1a1f2e;
+    --bg-card: #1e2337;
+    --bg-sidebar: #111827;
+    --border: #2d3748;
+    --text-primary: #f7fafc;
+    --text-secondary: #cbd5e0;
+    --text-muted: #718096;
+    --accent-primary: #3b82f6;
+    --accent-secondary: #2563eb;
+    --accent-gold: #fbbf24;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --radius-card: 12px;
+    --radius-button: 8px;
+    --radius-input: 8px;
+    --radius-badge: 999px;
+  }
+
+  html,
+  body {
+    height: 100%;
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.1) transparent;
+    scrollbar-color: color-mix(in srgb, var(--text-muted) 35%, transparent) transparent;
   }
 
   *::-webkit-scrollbar {
@@ -38,17 +82,20 @@
   }
 
   *::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.1);
+    background: color-mix(in srgb, var(--text-muted) 35%, transparent);
     border-radius: 3px;
   }
 
   body {
-    background: linear-gradient(135deg, #0a1628 0%, #0f1d32 40%, #132240 70%, #0a1628 100%);
+    background: radial-gradient(1200px 700px at 10% 10%, color-mix(in srgb, var(--accent-primary) 12%, transparent), transparent 55%),
+      radial-gradient(900px 600px at 90% 15%, color-mix(in srgb, var(--accent-gold) 10%, transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg-primary), var(--bg-secondary));
     background-attachment: fixed;
-    color: var(--foreground);
+    color: var(--text-primary);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background 0.2s ease, color 0.2s ease;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -59,41 +106,44 @@
 
 @layer components {
   .glass-card {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: 0 2px 8px var(--shadow);
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   }
 
   .glass-card-hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
-    transition: all 0.3s ease;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: 0 2px 8px var(--shadow);
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   }
 
   .glass-card-hover:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: color-mix(in srgb, var(--bg-card) 88%, var(--accent-primary));
+    border-color: color-mix(in srgb, var(--border) 65%, var(--accent-primary));
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 191, 255, 0.08);
+    box-shadow: 0 8px 32px var(--shadow);
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, #00629B, #00bfff);
+    background: var(--accent-primary);
     color: white;
     font-weight: 600;
     padding: 0.625rem 1.5rem;
-    border-radius: 0.75rem;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 15px rgba(0, 191, 255, 0.2);
+    border-radius: var(--radius-button);
+    transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--accent-primary) 25%, transparent);
   }
 
   .btn-primary:hover {
-    opacity: 0.9;
+    background: color-mix(in srgb, var(--accent-primary) 90%, black);
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(0, 191, 255, 0.3);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--accent-primary) 35%, transparent);
   }
 
   .btn-primary:disabled {
@@ -103,38 +153,38 @@
   }
 
   .btn-secondary {
-    background: rgba(0, 98, 155, 0.15);
-    color: #00bfff;
+    background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+    color: var(--accent-primary);
     font-weight: 500;
     padding: 0.625rem 1.5rem;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(0, 98, 155, 0.3);
-    transition: all 0.2s ease;
+    border-radius: var(--radius-button);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
 
   .btn-secondary:hover {
-    background: rgba(0, 98, 155, 0.25);
-    border-color: rgba(0, 191, 255, 0.5);
+    background: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+    border-color: color-mix(in srgb, var(--accent-primary) 55%, transparent);
   }
 
   .input-field {
     width: 100%;
     padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    border-radius: var(--radius-input);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
     outline: none;
-    transition: border-color 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .input-field:focus {
-    border-color: #00bfff;
-    box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.1);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 22%, transparent);
   }
 
   .input-field::placeholder {
-    color: rgba(148, 163, 184, 0.6);
+    color: color-mix(in srgb, var(--text-muted) 75%, transparent);
   }
 
   .sidebar-link {
@@ -143,24 +193,24 @@
     gap: 0.75rem;
     padding: 0.75rem 1rem;
     border-radius: 0.75rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
 
   .sidebar-link:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
+    background: color-mix(in srgb, var(--bg-card) 72%, transparent);
+    color: var(--text-primary);
   }
 
   .sidebar-link.active {
-    background: rgba(0, 98, 155, 0.2);
-    color: #00bfff;
-    border: 1px solid rgba(0, 98, 155, 0.3);
+    background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+    color: var(--accent-primary);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 32%, transparent);
   }
 
   .stat-glow {
-    box-shadow: 0 0 40px rgba(0, 191, 255, 0.06);
+    box-shadow: 0 0 40px color-mix(in srgb, var(--accent-primary) 12%, transparent);
   }
 
   .animate-fade-in {
@@ -187,9 +237,9 @@
   50% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.6); }
 }
 
-/* Toast overrides for dark theme */
+/* Toast overrides (Sonner) – bound to theme tokens */
 [data-sonner-toaster] {
-  --normal-bg: #132240 !important;
-  --normal-border: rgba(255, 255, 255, 0.1) !important;
-  --normal-text: #f8fafc !important;
+  --normal-bg: var(--bg-card) !important;
+  --normal-border: var(--border) !important;
+  --normal-text: var(--text-primary) !important;
 }

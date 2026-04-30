@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Inter, Bebas_Neue } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+import { ThemeInitScript } from "@/components/theme-init-script";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { SessionProfileProvider } from "@/components/session-profile-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,19 +33,18 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${bebasNeue.variable} h-full antialiased`}
     >
+      <head>
+        <ThemeInitScript />
+      </head>
       <body className="min-h-full flex flex-col font-body">
-        {children}
+        <div className="fixed top-4 right-4 z-50">
+          <ThemeToggle />
+        </div>
+        <SessionProfileProvider>{children}</SessionProfileProvider>
         <Toaster
           position="top-right"
           richColors
-          theme="dark"
-          toastOptions={{
-            style: {
-              background: '#132240',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: '#f8fafc',
-            },
-          }}
+          theme="system"
         />
       </body>
     </html>
