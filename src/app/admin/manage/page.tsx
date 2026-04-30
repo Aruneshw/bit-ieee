@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { Plus, Users, Upload, ShieldAlert, CheckCircle, AlertCircle } from "lucide-react";
+import { Plus, Users, Upload, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -11,31 +11,15 @@ interface Society { id: string; name: string; abbreviation: string; }
 export default function ManagePage() {
   const supabase = createClient();
   const [activeTab, setActiveTab] = useState("society");
-  const [userRole, setUserRole] = useState("");
   const [societies, setSocieties] = useState<Society[]>([]);
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        const { data } = await supabase.from("users").select("role").eq("email", user.email.toLowerCase()).single();
-        setUserRole(data?.role || "");
-      }
       const { data: socs } = await supabase.from("societies").select("id, name, abbreviation").order("name");
       if (socs) setSocieties(socs);
     }
     init();
   }, []);
-
-  if (userRole && userRole !== "admin_primary") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-400 mb-4 opacity-80" />
-        <h2 className="text-2xl font-bold text-red-400">Access Denied</h2>
-        <p className="mt-2 text-gray-400">Only Primary Administrators can access this page.</p>
-      </div>
-    );
-  }
 
   const tabs = [
     { id: "society", label: "Add Society" },

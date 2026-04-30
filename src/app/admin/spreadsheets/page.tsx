@@ -2,38 +2,11 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { Table, Search, Download, ShieldAlert, BarChart3 } from "lucide-react";
+import { Table, Search, Download, BarChart3 } from "lucide-react";
 import { BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 export default function SpreadsheetsPage() {
-  const supabase = createClient();
   const [activeTab, setActiveTab] = useState("activity");
-  const [userRole, setUserRole] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function checkRole() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        const { data } = await supabase.from("users").select("role").eq("email", user.email.toLowerCase()).single();
-        setUserRole(data?.role || "");
-      }
-      setLoading(false);
-    }
-    checkRole();
-  }, []);
-
-  if (loading) return <div className="h-96 glass-card animate-pulse" />;
-
-  if (userRole !== "admin_primary") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-400 mb-4 opacity-80" />
-        <h2 className="text-2xl font-bold text-red-400">Access Denied</h2>
-        <p className="mt-2 text-gray-400">Only Primary Administrators can access spreadsheets.</p>
-      </div>
-    );
-  }
 
   const tabs = [
     { id: "activity", label: "Activity Points" },

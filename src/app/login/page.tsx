@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Zap, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { getRoleDashboardPath, needsProfileCompletion } from "@/lib/types";
+import { getRoleDashboardPath, needsProfileCompletion, ADMIN_EMAILS } from "@/lib/types";
 import type { UserRole } from "@/lib/types";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -31,14 +31,6 @@ function LoginForm() {
   const supabase = createClient();
 
   const ALLOWED_DOMAIN = "bitsathy.ac.in";
-  const ADMIN_EMAILS = [
-    "bitieeehubadmin1@gmail.com",
-    "bitieeehubadmin2@gmail.com",
-    "aruneshownsty1@gmail.com",
-    "bitieeehubadmin3@gmail.com",
-    "bitieeehubadmin4@gmail.com",
-  ];
-
   function validateEmail(email: string): boolean {
     const normalizedEmail = email.toLowerCase();
     return normalizedEmail.endsWith(`@${ALLOWED_DOMAIN}`) || ADMIN_EMAILS.includes(normalizedEmail);

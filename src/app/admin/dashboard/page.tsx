@@ -24,17 +24,10 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalSocieties: 0, totalEvents: 0, pendingRequests: 0 });
   const [chartData, setChartData] = useState<SocietyPoints[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          const { data: profile } = await supabase.from("users").select("role").eq("email", user.email.toLowerCase()).single();
-          setUserRole(profile?.role || "");
-        }
-
         // Fetch counts
         const [usersRes, societiesRes, eventsRes, pendingRes] = await Promise.all([
           supabase.from("users").select("*", { count: "exact", head: true }),
@@ -125,12 +118,10 @@ export default function AdminDashboard() {
           <h1 className="text-4xl font-heading tracking-wide mb-2">Platform Overview</h1>
           <p className="text-gray-400">Welcome to the Admin Dashboard</p>
         </div>
-        {(userRole === "admin_primary" || userRole === "admin_secondary") && (
-          <button onClick={handleExport} className="btn-secondary flex items-center gap-2 text-sm">
-            <Download className="w-4 h-4" />
-            Export All Data
-          </button>
-        )}
+        <button onClick={handleExport} className="btn-secondary flex items-center gap-2 text-sm">
+          <Download className="w-4 h-4" />
+          Export All Data
+        </button>
       </div>
 
       {/* Stats Grid */}

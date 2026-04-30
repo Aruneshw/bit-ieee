@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { CheckSquare, Plus, ShieldAlert } from "lucide-react";
+import { CheckSquare, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminTaskPanel() {
@@ -11,21 +11,8 @@ export default function AdminTaskPanel() {
   const [selected, setSelected] = useState<string | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
-    async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        const { data } = await supabase.from("users").select("role").eq("email", user.email.toLowerCase()).single();
-        setUserRole(data?.role || "");
-      }
-    }
-    init();
-  }, []);
-
-  useEffect(() => {
-    if (!loading && userRole && userRole !== "admin_primary") return;
     async function fetchEvents() {
       const { data } = await supabase
         .from("events")
@@ -36,20 +23,10 @@ export default function AdminTaskPanel() {
       setLoading(false);
     }
     fetchEvents();
-  }, [loading, userRole]);
+  }, []);
 
   if (loading) {
     return <div className="space-y-4">{[...Array(4)].map((_, i) => <div key={i} className="h-16 glass-card animate-pulse" />)}</div>;
-  }
-
-  if (userRole !== "admin_primary") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-400 mb-4 opacity-80" />
-        <h2 className="text-2xl font-bold text-red-400">Access Denied</h2>
-        <p className="mt-2 text-gray-400">Only Primary Administrators can access the Task Panel.</p>
-      </div>
-    );
   }
 
   async function selectEvent(eventId: string) {

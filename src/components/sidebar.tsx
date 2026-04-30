@@ -17,7 +17,6 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   label: string;
-  adminPrimaryOnly?: boolean;
 }
 
 const adminNav: NavItem[] = [
@@ -27,7 +26,7 @@ const adminNav: NavItem[] = [
   { href: "/admin/update", icon: <Activity className="w-5 h-5" />, label: "Update" },
   { href: "/admin/notifications", icon: <Bell className="w-5 h-5" />, label: "Notifications" },
   { href: "/admin/tasks", icon: <CheckSquare className="w-5 h-5" />, label: "Task Panel" },
-  { href: "/admin/spreadsheets", icon: <Table className="w-5 h-5" />, label: "Spreadsheets", adminPrimaryOnly: true },
+  { href: "/admin/spreadsheets", icon: <Table className="w-5 h-5" />, label: "Spreadsheets" },
 ];
 
 const repNav: NavItem[] = [
@@ -55,7 +54,6 @@ const memberNav: NavItem[] = [
 function getNavItems(role: UserRole): NavItem[] {
   switch (role) {
     case "admin_primary": return adminNav;
-    case "admin_secondary": return adminNav.filter(n => !n.adminPrimaryOnly);
     case "student_rep": return repNav;
     case "leadership":
     case "event_manager": return leadershipNav;
@@ -66,8 +64,7 @@ function getNavItems(role: UserRole): NavItem[] {
 
 function getRoleTitle(role: UserRole): string {
   switch (role) {
-    case "admin_primary":
-    case "admin_secondary": return "Admin Panel";
+    case "admin_primary": return "Admin Panel";
     case "student_rep": return "Student Rep";
     case "leadership": return "Leadership";
     case "event_manager": return "Event Manager";

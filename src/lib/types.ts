@@ -1,4 +1,4 @@
-export type UserRole = 'admin_primary' | 'admin_secondary' | 'student_rep' | 'leadership' | 'membership' | 'event_manager'
+export type UserRole = 'admin_primary' | 'student_rep' | 'leadership' | 'membership' | 'event_manager'
 
 export interface UserProfile {
   id: string
@@ -183,13 +183,18 @@ export const SKILL_OPTIONS = [
 ] as const
 
 // Role hierarchy helpers
-export const ADMIN_ROLES: UserRole[] = ['admin_primary', 'admin_secondary']
-export const ADMIN_PRIMARY_EMAILS = ['bitieeehubadmin1@gmail.com', 'bitieeehubadmin2@gmail.com', 'aruneshownsty1@gmail.com']
-export const ADMIN_SECONDARY_EMAILS = ['bitieeehubadmin3@gmail.com', 'bitieeehubadmin4@gmail.com']
-export const ALL_ADMIN_EMAILS = [...ADMIN_PRIMARY_EMAILS, ...ADMIN_SECONDARY_EMAILS]
+export const ADMIN_ROLES: UserRole[] = ['admin_primary']
+export const ADMIN_EMAILS = [
+  'bitieeehubadmin1@gmail.com',
+  'bitieeehubadmin2@gmail.com',
+  'aruneshownsty1@gmail.com',
+  'bitieeehubadmin3@gmail.com',
+  'bitieeehubadmin4@gmail.com',
+]
+export const ALL_ADMIN_EMAILS = [...ADMIN_EMAILS]
 
 export function isAdmin(role: UserRole) {
-  return ADMIN_ROLES.includes(role)
+  return role === 'admin_primary'
 }
 
 export function isPrimaryAdmin(role: UserRole) {
@@ -202,8 +207,7 @@ export function needsProfileCompletion(role: UserRole) {
 
 export function getRoleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
-    admin_primary: 'Primary Admin',
-    admin_secondary: 'Secondary Admin',
+    admin_primary: 'Admin',
     student_rep: 'Student Rep',
     leadership: 'Leadership',
     membership: 'Member',
@@ -215,7 +219,6 @@ export function getRoleLabel(role: UserRole): string {
 export function getRoleColor(role: UserRole): string {
   const colors: Record<UserRole, string> = {
     admin_primary: 'bg-red-500/20 text-red-400 border-red-500/30',
-    admin_secondary: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
     student_rep: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     leadership: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     membership: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -226,8 +229,7 @@ export function getRoleColor(role: UserRole): string {
 
 export function getRoleDashboardPath(role: UserRole): string {
   switch (role) {
-    case 'admin_primary':
-    case 'admin_secondary': return '/admin/dashboard'
+    case 'admin_primary': return '/admin/dashboard'
     case 'student_rep': return '/rep/dashboard'
     case 'leadership': return '/leadership/dashboard'
     case 'event_manager': return '/leadership/dashboard'
