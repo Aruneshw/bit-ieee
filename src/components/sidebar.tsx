@@ -8,7 +8,7 @@ import { getRoleLabel, getRoleColor, type UserRole, type UserProfile } from "@/l
 import {
   LayoutDashboard, Users, UserPlus, Activity, Bell, CheckSquare,
   CalendarDays, FileText, Megaphone, LogOut, Table,
-  ChevronLeft, ChevronRight, Zap, Settings, BookOpen,
+  ChevronLeft, ChevronRight, Zap, Settings, BookOpen, Info,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -31,6 +31,7 @@ const adminNav: NavItem[] = [
   { href: "/admin/notifications", icon: <Bell className="w-5 h-5" />, label: "Notifications" },
   { href: "/admin/tasks", icon: <CheckSquare className="w-5 h-5" />, label: "Task Panel" },
   { href: "/admin/spreadsheets", icon: <Table className="w-5 h-5" />, label: "Spreadsheets" },
+  { href: "/admin/about-ieee", icon: <Info className="w-5 h-5" />, label: "About IEEE" },
 ];
 
 const repNav: NavItem[] = [
@@ -38,6 +39,7 @@ const repNav: NavItem[] = [
   { href: "/rep/calendar", icon: <CalendarDays className="w-5 h-5" />, label: "Global Calendar" },
   { href: "/rep/posts", icon: <Megaphone className="w-5 h-5" />, label: "Society Posts" },
   { href: "/rep/notifications", icon: <Bell className="w-5 h-5" />, label: "Send Notification" },
+  { href: "/rep/about-ieee", icon: <Info className="w-5 h-5" />, label: "About IEEE" },
 ];
 
 const leadershipNav: NavItem[] = [
@@ -48,6 +50,7 @@ const leadershipNav: NavItem[] = [
   { href: "/leadership/bookings", icon: <BookOpen className="w-5 h-5" />, label: "Book Events" },
   { href: "/leadership/update", icon: <FileText className="w-5 h-5" />, label: "Resume Builder" },
   { href: "/leadership/task", icon: <CheckSquare className="w-5 h-5" />, label: "Task" },
+  { href: "/leadership/about-ieee", icon: <Info className="w-5 h-5" />, label: "About IEEE" },
 ];
 
 const memberNav: NavItem[] = [
@@ -59,6 +62,7 @@ const memberNav: NavItem[] = [
   { href: "/member/attendance", icon: <CheckSquare className="w-5 h-5" />, label: "Mark Attendance" },
   { href: "/member/society", icon: <Users className="w-5 h-5" />, label: "Society Status" },
   { href: "/member/task", icon: <CheckSquare className="w-5 h-5" />, label: "Task" },
+  { href: "/member/about-ieee", icon: <Info className="w-5 h-5" />, label: "About IEEE" },
 ];
 
 function getNavItems(role: UserRole): NavItem[] {
