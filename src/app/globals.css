@@ -20,21 +20,21 @@
    * ========================================================= */
   :root,
   [data-theme="light"] {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f4f6f9;
-    --bg-card: #ffffff;
-    --bg-sidebar: #1a1f36;
-    --border: #e2e8f0;
-    --text-primary: #1a202c;
-    --text-secondary: #4a5568;
-    --text-muted: #718096;
-    --accent-primary: #2563eb;
-    --accent-secondary: #1e40af;
+    --bg-primary: #00629B; /* Pantone 3015 C */
+    --bg-secondary: #005080;
+    --bg-card: rgba(255, 255, 255, 0.15);
+    --bg-sidebar: #004d7a;
+    --border: rgba(255, 255, 255, 0.25);
+    --text-primary: #ffffff;
+    --text-secondary: #e0f2fe;
+    --text-muted: #bae6fd;
+    --accent-primary: #00bfff; /* Electric blue for contrast */
+    --accent-secondary: #0099cc;
     --accent-gold: #f59e0b;
-    --success: #16a34a;
-    --warning: #d97706;
-    --danger: #dc2626;
-    --shadow: rgba(0, 0, 0, 0.08);
+    --success: #22c55e;
+    --warning: #fbbf24;
+    --danger: #ef4444;
+    --shadow: rgba(0, 0, 0, 0.15);
     --radius-card: 12px;
     --radius-button: 8px;
     --radius-input: 8px;
@@ -42,21 +42,21 @@
   }
 
   [data-theme="dark"] {
-    --bg-primary: #0f1117;
-    --bg-secondary: #1a1f2e;
-    --bg-card: #1e2337;
-    --bg-sidebar: #111827;
-    --border: #2d3748;
-    --text-primary: #f7fafc;
+    --bg-primary: #001a2c; /* Deep navy base */
+    --bg-secondary: #002640;
+    --bg-card: rgba(0, 98, 155, 0.15); /* Tinted with IEEE Blue */
+    --bg-sidebar: #001320;
+    --border: rgba(0, 98, 155, 0.4);
+    --text-primary: #ffffff;
     --text-secondary: #cbd5e0;
     --text-muted: #718096;
-    --accent-primary: #3b82f6;
-    --accent-secondary: #2563eb;
+    --accent-primary: #00629B; /* Pantone 3015 C as accent */
+    --accent-secondary: #004d7a;
     --accent-gold: #fbbf24;
     --success: #22c55e;
     --warning: #f59e0b;
     --danger: #ef4444;
-    --shadow: rgba(0, 0, 0, 0.4);
+    --shadow: rgba(0, 0, 0, 0.5);
     --radius-card: 12px;
     --radius-button: 8px;
     --radius-input: 8px;
