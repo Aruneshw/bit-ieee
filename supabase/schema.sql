@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS events (
   description TEXT,
   short_description TEXT,
   detailed_description TEXT,
-  society_id UUID NOT NULL REFERENCES societies(id) ON DELETE CASCADE,
+  society_id UUID REFERENCES societies(id) ON DELETE CASCADE,
   organiser_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   organizer_name TEXT,
   organizer_department TEXT,
@@ -316,8 +316,8 @@ CREATE POLICY "Admins can manage all events" ON events FOR ALL USING (
 CREATE POLICY "Society members can view their events" ON events FOR SELECT USING (
   society_id = public.get_my_society_id()
 );
-CREATE POLICY "Leadership can create events" ON events FOR INSERT WITH CHECK (
-  public.get_my_role() IN ('leadership','event_manager')
+CREATE POLICY "Members can submit event requests" ON events FOR INSERT WITH CHECK (
+  public.get_my_role() IN ('membership','leadership','event_manager')
 );
 
 -- Activity Points
