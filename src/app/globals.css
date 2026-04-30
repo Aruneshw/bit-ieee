@@ -278,7 +278,6 @@
   .calendar-wrapper {
     padding: 10px !important;
   }
-}
 
   .rbc-calendar {
     font-size: 12px;
@@ -297,6 +296,7 @@
     padding: 1px 2px;
   }
 }
+
 
 .calendar-wrapper .rbc-off-range-bg {
   background: rgba(255, 255, 255, 0.03);
