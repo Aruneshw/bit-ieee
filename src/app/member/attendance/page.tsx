@@ -46,11 +46,11 @@ export default function MarkAttendancePage() {
     try {
       const today = todayISO();
       const { data, error } = await supabase
-        .from("bookings")
+        .from("event_bookings")
         .select(
           "id, event_id, attended_start, attended_end, event:events(id, name, venue, event_date, start_time, end_time, status, attendance_type)"
         )
-        .eq("member_id", profile.id)
+        .eq("user_id", profile.id)
         .in("event.status", ["approved", "ongoing"])
         .eq("event.event_date", today);
 

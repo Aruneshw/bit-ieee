@@ -97,7 +97,7 @@ export default function MemberActivityPage() {
           .select("*, society:societies(id, name, abbreviation), organiser:users(id, full_name, name, department)")
           .in("status", ["approved", "ongoing"])
           .order("event_date", { ascending: true }),
-        supabase.from("bookings").select("event_id").eq("member_id", profile.id),
+        supabase.from("event_bookings").select("event_id").eq("user_id", profile.id),
         supabase
           .from("events")
           .select("id, name, short_description, status, admin_notes, created_at, event_date, start_time, end_time")
@@ -145,7 +145,7 @@ export default function MemberActivityPage() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "bookings", filter: `member_id=eq.${profile.id}` },
+        { event: "*", schema: "public", table: "event_bookings", filter: `user_id=eq.${profile.id}` },
         () => fetchAll()
       )
       .subscribe();
@@ -538,7 +538,7 @@ function EventDrawer({ event, onClose }: { event: EventRow | null; onClose: () =
           transform: open ? "translateX(0)" : "translateX(100%)",
           background: "var(--bg-card)",
           borderLeft: `1px solid var(--border)`,
-          boxShadow: `-8px 0 24px var(--shadow)`,
+          boxShadow: open ? `-8px 0 24px var(--shadow)` : `none`,
         }}
       >
         <div className="p-5 border-b flex items-start justify-between gap-3" style={{ borderColor: "var(--border)" }}>

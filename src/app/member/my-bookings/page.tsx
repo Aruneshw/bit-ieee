@@ -30,9 +30,9 @@ export default function MyBookingsPage() {
     setError(null);
     try {
       const { data, error } = await supabase
-        .from("bookings")
+        .from("event_bookings")
         .select("*, event:events(id, name, venue, event_date, start_time, end_time, status)")
-        .eq("member_id", profile.id)
+        .eq("user_id", profile.id)
         .order("booked_at", { ascending: false });
 
       if (error) throw error;

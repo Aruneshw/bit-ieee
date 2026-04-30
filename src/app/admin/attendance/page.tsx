@@ -33,8 +33,8 @@ export default function AdminAttendancePage() {
     setError(null);
     try {
       const { data, error } = await supabase
-        .from("bookings")
-        .select("member_id, attended_start, attended_end, member:users(full_name, name, roll_number, department, society_id)")
+        .from("event_bookings")
+        .select("user_id, attended_start, attended_end, member:users(full_name, name, roll_number, department, society_id)")
         .eq("event_id", eid);
       if (error) throw error;
       setRows(data || []);
@@ -112,7 +112,7 @@ export default function AdminAttendancePage() {
         const points = full ? pointCfg.full : partial ? pointCfg.partial : 0;
         if (points <= 0) continue;
         inserts.push({
-          user_id: r.member_id,
+          user_id: r.user_id,
           event_id: eventId,
           points,
           event_name: eRow?.name || "Event",

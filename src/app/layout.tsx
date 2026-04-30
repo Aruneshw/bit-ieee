@@ -37,7 +37,7 @@ export default function RootLayout({
         <ThemeInitScript />
       </head>
       <body className="min-h-full flex flex-col font-body">
-        <div className="fixed top-4 right-4 z-50">
+        <div className="fixed bottom-4 right-4 z-50">
           <ThemeToggle />
         </div>
         <SessionProfileProvider>{children}</SessionProfileProvider>
