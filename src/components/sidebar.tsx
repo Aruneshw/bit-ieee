@@ -184,29 +184,41 @@ export default function Sidebar({ user }: { user: UserProfile }) {
 
       {/* User Section */}
       <div className="p-3 border-t border-white/5">
-        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00629B] to-[#00bfff] flex items-center justify-center shrink-0 text-white text-xs font-bold">
+        <Link 
+          href={`/${user.role === 'admin_primary' ? 'admin' : user.role === 'student_rep' ? 'rep' : user.role === 'leadership' ? 'leadership' : 'member'}/update`}
+          className={cn(
+            "flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all group",
+            collapsed && "justify-center"
+          )}
+        >
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#00629B] to-[#00bfff] flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-lg shadow-[#00bfff]/20 group-hover:scale-110 transition-transform">
             {(user.name || user.email)?.[0]?.toUpperCase() || "?"}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-white">{user.name || "User"}</p>
-              <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md font-semibold border", getRoleColor(user.role))}>
+              <p className="text-sm font-semibold truncate text-white group-hover:text-[#00bfff] transition-colors">
+                {user.name || "User Account"}
+              </p>
+              <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md font-bold border uppercase tracking-tighter", getRoleColor(user.role))}>
                 {getRoleLabel(user.role)}
               </span>
             </div>
           )}
           {!collapsed && (
             <button
-              onClick={handleLogout}
+              onClick={(e) => {
+                e.preventDefault();
+                handleLogout();
+              }}
               className="text-gray-500 hover:text-red-400 transition-colors p-1"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
             </button>
           )}
-        </div>
+        </Link>
       </div>
+
     </aside>
   );
 }

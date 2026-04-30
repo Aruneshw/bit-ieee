@@ -243,3 +243,110 @@
   --normal-border: var(--border) !important;
   --normal-text: var(--text-primary) !important;
 }
+
+/* =========================================================
+ * React Big Calendar Mobile Fixes
+ * ========================================================= */
+@media (max-width: 640px) {
+  .rbc-toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px !important;
+  }
+
+  .rbc-toolbar-label {
+    order: -1;
+    width: 100%;
+    margin: 0 0 8px 0 !important;
+    font-size: 1.1rem !important;
+  }
+
+  .rbc-btn-group {
+    width: 100%;
+    margin: 0 !important;
+    display: flex;
+  }
+
+  .rbc-btn-group button {
+    flex: 1;
+    font-size: 10px !important;
+    padding: 6px 2px !important;
+  }
+
+  .calendar-wrapper {
+    padding: 10px !important;
+  }
+}
+
+  .rbc-calendar {
+    font-size: 12px;
+  }
+
+  .rbc-header {
+    padding: 4px 2px !important;
+  }
+
+  .rbc-header span {
+    font-size: 10px;
+  }
+
+  .rbc-event-content {
+    font-size: 10px;
+    padding: 1px 2px;
+  }
+}
+
+.calendar-wrapper .rbc-off-range-bg {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.calendar-wrapper .rbc-today {
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+}
+
+.calendar-wrapper .rbc-month-view,
+.calendar-wrapper .rbc-time-view,
+.calendar-wrapper .rbc-agenda-view {
+  border-color: var(--border) !important;
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.calendar-wrapper .rbc-header,
+.calendar-wrapper .rbc-day-bg {
+  border-color: var(--border) !important;
+}
+
+.calendar-wrapper .rbc-month-row {
+  border-color: var(--border) !important;
+}
+
+.calendar-wrapper .rbc-timeslot-group {
+  border-color: var(--border) !important;
+}
+
+.calendar-wrapper .rbc-time-content {
+  border-color: var(--border) !important;
+}
+
+.calendar-wrapper .rbc-btn-group button {
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+.calendar-wrapper .rbc-btn-group button:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.calendar-wrapper .rbc-btn-group button.rbc-active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent-primary) 40%, transparent);
+}
+
