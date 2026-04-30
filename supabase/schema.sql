@@ -340,6 +340,22 @@ CREATE POLICY "Admins view all submissions" ON task_submissions FOR SELECT USING
   public.get_my_role() IN ('admin_primary','leadership')
 );
 
+CREATE TABLE IF NOT EXISTS event_team (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  member_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE POLICY "Admins can manage event teams" ON event_team FOR ALL USING (
+  public.get_my_role() IN ('admin_primary','leadership')
+);
+
+CREATE POLICY "Everyone can view event teams" ON event_team FOR SELECT USING (true);
+
+ALTER TABLE event_team ENABLE ROW LEVEL SECURITY;
+
 -- Event Bookings
 CREATE POLICY "Users manage own bookings" ON event_bookings FOR ALL USING (user_id = auth.uid());
 CREATE POLICY "Admins manage bookings" ON event_bookings FOR ALL USING (
