@@ -445,6 +445,11 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('media', 'media', true)
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "Authenticated users can upload media" ON storage.objects;
+DROP POLICY IF EXISTS "Media is publicly viewable" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own media" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own media" ON storage.objects;
+
 -- Allow authenticated users to upload media
 CREATE POLICY "Authenticated users can upload media"
   ON storage.objects FOR INSERT
