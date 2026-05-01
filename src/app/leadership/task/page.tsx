@@ -101,63 +101,27 @@ function OTPManager() {
       return;
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: existing } = await supabase.from("tasks").select("id").eq("event_id", eventId).single();
+      // Use the new secure Quiz Start API
+      const res = await fetch("/api/quiz/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId })
+      });
       
-      if (existing) {
-        await supabase.from("tasks").update({ 
-          otp, 
-          otp_expires_at: new Date(Date.now() + 3600000).toISOString() 
-        }).eq("id", existing.id);
-      } else {
-        await supabase.from("tasks").insert({
-          event_id: eventId, 
-          type: "mcq", 
-          otp,
-          otp_expires_at: new Date(Date.now() + 3600000).toISOString(),
-          created_by: user?.id,
-        });
-      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to start quiz session");
 
-      // Send Email to Organizer
-      const organiserEmail = selectedEvent.organiser?.email;
-      if (organiserEmail) {
-        await fetch("/api/send-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: organiserEmail,
-            subject: `IEEE Hub — OTP for "${selectedEvent.name}"`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a192f; color: #ffffff; padding: 30px; border-radius: 12px; border: 1px solid #00bfff20;">
-                <h2 style="color: #00bfff; border-bottom: 1px solid #ffffff10; padding-bottom: 10px;">Event Task OTP</h2>
-                <p>Hello ${selectedEvent.organiser?.name || 'Organizer'},</p>
-                <p>The OTP for your event <strong>"${selectedEvent.name}"</strong> has been generated successfully.</p>
-                
-                <div style="background: #ffffff05; border: 1px solid #00bfff40; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-                  <span style="font-size: 32px; font-family: monospace; letter-spacing: 10px; color: #ffffff; font-weight: bold;">${otp}</span>
-                </div>
-                
-                <p style="color: #8892b0; font-size: 14px;">This OTP is valid for 1 hour. Share this code with the participants so they can unlock the task questions.</p>
-                <p style="color: #64ffda; font-size: 12px; margin-top: 30px;">IEEE BIT Hub Portal — Secure Management</p>
-              </div>
-            `
-          })
-        });
-        toast.success("OTP sent to your email!");
-      }
+      setGeneratedOtp(json.otp);
+      toast.success(`Quiz started! OTP sent to ${json.studentCount} students.`);
 
-      setGeneratedOtp(otp);
-      toast.success("OTP saved to database!");
     } catch (err: any) {
-      toast.error(err.message || "Failed to generate OTP");
+      toast.error(err.message || "Failed to start quiz session");
     } finally {
       setGenerating(false);
     }
   }
+
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-10 animate-pulse">
