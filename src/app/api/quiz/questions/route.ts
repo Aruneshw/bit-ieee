@@ -1,9 +1,9 @@
-import { createClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
 export const runtime = "nodejs";
+
 
 const JWT_SECRET = process.env.QUIZ_JWT_SECRET || "bit-ieee-quiz-secret-2026";
 
@@ -16,18 +16,14 @@ export async function GET(request: Request) {
   const token = authHeader.split(" ")[1];
 
   try {
-    // 1. Verify Quiz JWT
     const decoded: any = jwt.verify(token, JWT_SECRET);
     const { taskId, hostId } = decoded;
 
-    const cookieStore = cookies();
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { get: (n) => cookieStore.get(n)?.value } }
-    );
+    const supabase = await createClient();
+
 
     // 2. Fetch questions for this task
+
     // We enforce hostId isolation in the query for extra safety
     const { data: task, error } = await supabase
       .from("tasks")

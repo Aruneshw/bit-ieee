@@ -1,23 +1,19 @@
-import { createClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 export const runtime = "nodejs";
 
+
 // In production, always use a real secret from process.env
 const JWT_SECRET = process.env.QUIZ_JWT_SECRET || "bit-ieee-quiz-secret-2026";
 
 export async function POST(request: Request) {
-  const cookieStore = cookies();
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get: (n) => cookieStore.get(n)?.value } }
-  );
+  const supabase = await createClient();
 
   try {
+
     const { email, otp } = await request.json();
 
     if (!email || !otp) {
