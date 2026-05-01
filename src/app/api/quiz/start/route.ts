@@ -51,7 +51,10 @@ export async function POST(request: Request) {
       task = newTask;
     }
 
+    if (!task) throw new Error("Task initialization failed");
+
     // 3. Generate and Hash OTP
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = await bcrypt.hash(otp, 10);
 
