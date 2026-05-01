@@ -81,12 +81,15 @@ export async function POST(request: Request) {
       { expiresIn: "2h" }
     );
 
+    const eventData = Array.isArray(validSession.event) ? validSession.event[0] : validSession.event;
+
     return NextResponse.json({
       success: true,
       token,
-      event: validSession.event,
+      event: eventData,
       user: { name: user.name }
     });
+
 
   } catch (error: any) {
     console.error("Quiz Verify Error:", error);

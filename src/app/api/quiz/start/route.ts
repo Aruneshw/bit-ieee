@@ -46,7 +46,8 @@ export async function POST(request: Request) {
         type: "mcq",
         created_by: user.id
       }).select().single();
-      if (taskErr) throw taskErr;
+      
+      if (taskErr || !newTask) throw new Error(taskErr?.message || "Failed to create task");
       task = newTask;
     }
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 mins
     }).select().single();
 
-    if (sessErr) throw sessErr;
+    if (sessErr || !session) throw new Error(sessErr?.message || "Failed to create quiz session");
 
     // 5. Fetch booked students
     const { data: bookings } = await supabase
@@ -73,12 +74,17 @@ export async function POST(request: Request) {
       .select("user:users(name, email)")
       .eq("event_id", eventId);
 
-    const attendees = (bookings || []).map(b => b.user).filter(u => u?.email);
+    const attendees = (bookings || [])
+      .map(b => b.user as unknown as { name: string; email: string })
+      .filter(u => u && u.email);
 
     // 6. Bulk Send OTP via Nodemailer
     if (attendees.length > 0) {
-      // For large counts, we should use a queue, but for 50-100 students, a Promise.all is okay
-      // but sequential or chunked is safer for SMTP limits.
+      // Get organiser name and email safely
+      const organiser = Array.isArray(event.organiser) ? event.organiser[0] : event.organiser;
+      const organiserName = (organiser as any)?.name || "Organizer";
+      const organiserEmail = (organiser as any)?.email;
+
       const sendPromises = attendees.map(student => 
         transporter.sendMail({
           from: `"IEEE BIT Hub" <${process.env.SMTP_USER}>`,
@@ -93,7 +99,7 @@ export async function POST(request: Request) {
               </div>
               <p style="font-size: 14px; color: #8892b0;">
                 Valid for 15 minutes.<br/>
-                Hosted by: ${event.organiser?.name}<br/>
+                Hosted by: ${organiserName}<br/>
                 Venue: ${event.venue || 'TBA'}
               </p>
             </div>

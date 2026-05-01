@@ -36,12 +36,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Task not found or unauthorized access" }, { status: 404 });
     }
 
+    const event = Array.isArray(task.event) ? task.event[0] : task.event;
+
     return NextResponse.json({
       success: true,
       questions: task.questions,
       type: task.type,
-      eventName: task.event?.name
+      eventName: (event as any)?.name || "Unknown Event"
     });
+
 
   } catch (error: any) {
     console.error("Quiz Questions Error:", error);
