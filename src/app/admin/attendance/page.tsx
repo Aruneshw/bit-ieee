@@ -126,14 +126,23 @@ export default function AdminAttendancePage() {
         return;
       }
 
-      const { error } = await supabase.from("activity_points").insert(inserts);
-      if (error) throw error;
-      toast.success(`Allocated points to ${inserts.length} attendees.`);
+      // Chunk inserts to avoid timeouts with 5000+ students
+      const chunkSize = 100;
+      let successCount = 0;
+      for (let i = 0; i < inserts.length; i += chunkSize) {
+        const chunk = inserts.slice(i, i + chunkSize);
+        const { error } = await supabase.from("activity_points").insert(chunk);
+        if (error) throw error;
+        successCount += chunk.length;
+      }
+
+      toast.success(`Successfully allocated points to ${successCount} attendees.`);
     } catch (e: any) {
       toast.error(e.message || "Failed to allocate points");
     } finally {
       setAllocating(false);
     }
+
   }
 
   return (

@@ -457,18 +457,30 @@ function RoleManagementV2({ supabase }: { supabase: any }) {
   const [roleFilter, setRoleFilter] = useState<"all" | "membership" | "leadership">("all");
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
 
   async function fetchRows() {
     setLoading(true);
-    let query = supabase.from("users").select("id, full_name, name, roll_number, email, department, role").order("created_at", { ascending: false }).limit(200);
+    let query = supabase
+      .from("users")
+      .select("id, full_name, name, roll_number, email, department, role")
+      .order("created_at", { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
     if (roleFilter !== "all") query = query.eq("role", roleFilter);
     if (q.trim()) query = query.or(`full_name.ilike.%${q}%,name.ilike.%${q}%,roll_number.ilike.%${q}%,email.ilike.%${q}%`);
+    
     const { data } = await query;
     setRows(data || []);
     setLoading(false);
   }
 
-  useEffect(() => { fetchRows(); }, [q, roleFilter]);
+  useEffect(() => { 
+    setPage(0); // Reset to page 0 on search
+  }, [q, roleFilter]);
+
+  useEffect(() => { fetchRows(); }, [q, roleFilter, page]);
 
   async function changeRole(u: any, next: "membership" | "leadership") {
     if (u.role === "admin_primary") {
@@ -503,44 +515,65 @@ function RoleManagementV2({ supabase }: { supabase: any }) {
       {loading ? (
         <div className="h-32 glass-card animate-pulse" />
       ) : (
-        <div className="overflow-x-auto border border-white/5 rounded-xl">
-          <table className="w-full text-sm">
-            <thead className="bg-white/[0.03] border-b border-white/5">
-              <tr>
-                <th className="text-left py-3 px-4 text-gray-400">Name</th>
-                <th className="text-left py-3 px-4 text-gray-400">Roll</th>
-                <th className="text-left py-3 px-4 text-gray-400">Email</th>
-                <th className="text-left py-3 px-4 text-gray-400">Current Role</th>
-                <th className="text-right py-3 px-4 text-gray-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {rows.map((u) => (
-                <tr key={u.id}>
-                  <td className="py-3 px-4 text-white font-medium">{u.full_name || u.name || "—"}</td>
-                  <td className="py-3 px-4 text-gray-300">{u.roll_number || "—"}</td>
-                  <td className="py-3 px-4 text-gray-300">{u.email}</td>
-                  <td className="py-3 px-4 text-gray-300">{u.role}</td>
-                  <td className="py-3 px-4 text-right">
-                    <select
-                      className="input-field !w-40 inline-block"
-                      value={u.role === "leadership" ? "leadership" : "membership"}
-                      onChange={(e) => changeRole(u, e.target.value as any)}
-                      disabled={u.role === "admin_primary"}
-                    >
-                      <option value="membership">member</option>
-                      <option value="leadership">leadership</option>
-                    </select>
-                  </td>
+        <>
+          <div className="overflow-x-auto border border-white/5 rounded-xl">
+            <table className="w-full text-sm">
+              <thead className="bg-white/[0.03] border-b border-white/5">
+                <tr>
+                  <th className="text-left py-3 px-4 text-gray-400">Name</th>
+                  <th className="text-left py-3 px-4 text-gray-400">Roll</th>
+                  <th className="text-left py-3 px-4 text-gray-400">Email</th>
+                  <th className="text-left py-3 px-4 text-gray-400">Current Role</th>
+                  <th className="text-right py-3 px-4 text-gray-400">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {rows.map((u) => (
+                  <tr key={u.id}>
+                    <td className="py-3 px-4 text-white font-medium">{u.full_name || u.name || "—"}</td>
+                    <td className="py-3 px-4 text-gray-300">{u.roll_number || "—"}</td>
+                    <td className="py-3 px-4 text-gray-300">{u.email}</td>
+                    <td className="py-3 px-4 text-gray-300">{u.role}</td>
+                    <td className="py-3 px-4 text-right">
+                      <select
+                        className="input-field !w-40 inline-block"
+                        value={u.role === "leadership" ? "leadership" : "membership"}
+                        onChange={(e) => changeRole(u, e.target.value as any)}
+                        disabled={u.role === "admin_primary"}
+                      >
+                        <option value="membership">member</option>
+                        <option value="leadership">leadership</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <button
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0 || loading}
+              className="btn-secondary text-xs px-4"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-gray-500">Page {page + 1}</span>
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={rows.length < pageSize || loading}
+              className="btn-secondary text-xs px-4"
+            >
+              Next
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
 }
+
 
 function AddSocietyForm({ supabase }: { supabase: any }) {
   const [loading, setLoading] = useState(false);

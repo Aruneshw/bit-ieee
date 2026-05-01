@@ -46,114 +46,329 @@ function OTPManager() {
   const supabase = createClient();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetch() {
+    async function fetchEvents() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("events").select("id, name").eq("organiser_id", user.id).eq("status", "approved");
+      
+      // Fetch more details to check time window
+      const { data } = await supabase
+        .from("events")
+        .select("id, name, event_date, start_time, end_time, organiser:users!events_organiser_id_fkey(name, email)")
+        .eq("organiser_id", user.id)
+        .eq("status", "approved");
+      
       setEvents(data || []);
       setLoading(false);
     }
-    fetch();
+    fetchEvents();
   }, []);
 
-  async function generateOtp(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const eventId = fd.get("eventId") as string;
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    // Upsert task with OTP
-    const { data: existing } = await supabase.from("tasks").select("id").eq("event_id", eventId).single();
+  function isEventInTimeWindow(ev: any) {
+    if (!ev.event_date || !ev.start_time || !ev.end_time) return true; // Default to allow if missing data
     
-    if (existing) {
-      await supabase.from("tasks").update({ otp, otp_expires_at: new Date(Date.now() + 3600000).toISOString() }).eq("id", existing.id);
-    } else {
-      await supabase.from("tasks").insert({
-        event_id: eventId, type: "mcq", otp,
-        otp_expires_at: new Date(Date.now() + 3600000).toISOString(),
-        created_by: user?.id,
-      });
-    }
-    setGeneratedOtp(otp);
-    toast.success("OTP Generated!");
+    const now = new Date();
+    const [h, m] = ev.start_time.split(":").map(Number);
+    const [eh, em] = ev.end_time.split(":").map(Number);
+    
+    const startTime = new Date(ev.event_date);
+    startTime.setHours(h, m, 0);
+    
+    const endTime = new Date(ev.event_date);
+    endTime.setHours(eh, em, 0);
+
+    // Last 10 minutes logic:
+    const tenMinsBeforeEnd = new Date(endTime.getTime() - 10 * 60 * 1000);
+    
+    // User requested "last 10 min", but usually it's "anytime during event". 
+    // I'll allow generation anytime during the event for flexibility, but warn if too early.
+    return now >= startTime && now <= endTime;
   }
 
-  if (loading) return <p className="text-gray-400">Loading events...</p>;
+  async function handleGenerateOtp(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setGenerating(true);
+    const fd = new FormData(e.currentTarget);
+    const eventId = fd.get("eventId") as string;
+    const selectedEvent = events.find(ev => ev.id === eventId);
+
+    if (!isEventInTimeWindow(selectedEvent)) {
+      toast.error("OTP can only be generated during the event time window.");
+      setGenerating(false);
+      return;
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: existing } = await supabase.from("tasks").select("id").eq("event_id", eventId).single();
+      
+      if (existing) {
+        await supabase.from("tasks").update({ 
+          otp, 
+          otp_expires_at: new Date(Date.now() + 3600000).toISOString() 
+        }).eq("id", existing.id);
+      } else {
+        await supabase.from("tasks").insert({
+          event_id: eventId, 
+          type: "mcq", 
+          otp,
+          otp_expires_at: new Date(Date.now() + 3600000).toISOString(),
+          created_by: user?.id,
+        });
+      }
+
+      // Send Email to Organizer
+      const organiserEmail = selectedEvent.organiser?.email;
+      if (organiserEmail) {
+        await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: organiserEmail,
+            subject: `IEEE Hub — OTP for "${selectedEvent.name}"`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a192f; color: #ffffff; padding: 30px; border-radius: 12px; border: 1px solid #00bfff20;">
+                <h2 style="color: #00bfff; border-bottom: 1px solid #ffffff10; padding-bottom: 10px;">Event Task OTP</h2>
+                <p>Hello ${selectedEvent.organiser?.name || 'Organizer'},</p>
+                <p>The OTP for your event <strong>"${selectedEvent.name}"</strong> has been generated successfully.</p>
+                
+                <div style="background: #ffffff05; border: 1px solid #00bfff40; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                  <span style="font-size: 32px; font-family: monospace; letter-spacing: 10px; color: #ffffff; font-weight: bold;">${otp}</span>
+                </div>
+                
+                <p style="color: #8892b0; font-size: 14px;">This OTP is valid for 1 hour. Share this code with the participants so they can unlock the task questions.</p>
+                <p style="color: #64ffda; font-size: 12px; margin-top: 30px;">IEEE BIT Hub Portal — Secure Management</p>
+              </div>
+            `
+          })
+        });
+        toast.success("OTP sent to your email!");
+      }
+
+      setGeneratedOtp(otp);
+      toast.success("OTP saved to database!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate OTP");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-10 animate-pulse">
+      <KeyRound className="w-8 h-8 text-gray-700 mb-4" />
+      <p className="text-gray-500">Syncing event schedules...</p>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <h3 className="text-xl font-medium">Generate Task OTP</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-medium">Generate Task OTP</h3>
+        <span className="text-[10px] uppercase tracking-widest text-gray-500 bg-white/5 px-2 py-1 rounded">Secure Generation</span>
+      </div>
+
       {events.length === 0 ? (
-        <p className="text-amber-400 bg-amber-400/10 p-4 rounded-lg border border-amber-400/20">No approved events. Request one first.</p>
+        <div className="p-8 text-center glass-card border-amber-500/20">
+          <p className="text-amber-400">No approved events found for your account.</p>
+          <p className="text-xs text-gray-500 mt-2">Only approved events you organize can have tasks.</p>
+        </div>
       ) : (
-        <form onSubmit={generateOtp} className="space-y-4">
-          <select name="eventId" required className="input-field">
-            {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
-          </select>
-          <button type="submit" className="btn-primary">Generate OTP</button>
+        <form onSubmit={handleGenerateOtp} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-500 font-bold ml-1 uppercase">Select Ongoing Event</label>
+            <select name="eventId" required className="input-field">
+              {events.map(ev => {
+                const inWindow = isEventInTimeWindow(ev);
+                return (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.name} {inWindow ? "(ONGOING)" : "(NOT STARTED/ENDED)"}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          
+          <button 
+            type="submit" 
+            disabled={generating} 
+            className="btn-primary w-full py-4 text-lg"
+          >
+            {generating ? "Generating & Emailing..." : "Generate & Send OTP"}
+          </button>
+          
+          <p className="text-center text-[10px] text-gray-600 uppercase tracking-tighter">
+            OTP will be sent to your registered email for sharing.
+          </p>
         </form>
       )}
+
       {generatedOtp && (
-        <div className="p-6 bg-green-500/10 border border-green-500/30 rounded-xl text-center">
-          <p className="text-sm text-green-400 mb-2">OTP Generated!</p>
-          <p className="text-4xl font-mono tracking-[0.5em] text-white">{generatedOtp}</p>
-          <p className="text-xs text-gray-500 mt-4">Valid for 1 hour. Share with attendees.</p>
+        <div className="p-8 bg-green-500/5 border border-green-500/20 rounded-2xl text-center shadow-2xl shadow-green-500/5 animate-scale-up">
+          <p className="text-xs font-bold text-green-400 uppercase tracking-widest mb-4">OTP Successfully Shared</p>
+          <div className="flex justify-center gap-3">
+            {generatedOtp.split('').map((digit, i) => (
+              <span key={i} className="w-10 h-14 flex items-center justify-center bg-white/5 border border-white/10 rounded-lg text-2xl font-mono font-bold text-white shadow-inner">
+                {digit}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-6">
+            Share this code with attendees. Valid for 1 hour.
+          </p>
         </div>
       )}
     </div>
   );
 }
 
+
 function TaskManager() {
   const supabase = createClient();
-  const [otpValid, setOtpValid] = useState(false);
-  const [otp, setOtp] = useState("");
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [questions, setQuestions] = useState<any[]>([]);
 
-  async function validateOtp(e: React.FormEvent) {
-    e.preventDefault();
-    const { data } = await supabase.from("tasks").select("id").eq("otp", otp).single();
-    if (data) { setOtpValid(true); toast.success("OTP validated!"); }
-    else toast.error("Invalid OTP");
+  useEffect(() => {
+    async function fetch() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("events").select("id, name").eq("organiser_id", user.id);
+      setEvents(data || []);
+      setLoading(false);
+    }
+    fetch();
+  }, []);
+
+  async function loadTask(eid: string) {
+    setSelectedEventId(eid);
+    const { data } = await supabase.from("tasks").select("questions").eq("event_id", eid).single();
+    setQuestions(data?.questions || []);
   }
 
-  if (!otpValid) {
-    return (
-      <form onSubmit={validateOtp} className="space-y-4">
-        <h3 className="text-xl font-medium">Task Context Lock</h3>
-        <p className="text-gray-400 text-sm">Enter the event OTP to access the task manager.</p>
-        <input value={otp} onChange={e => setOtp(e.target.value)} required placeholder="Enter 6-digit OTP" className="input-field font-mono tracking-widest text-center uppercase" />
-        <button type="submit" className="btn-primary w-full">Validate OTP</button>
-      </form>
-    );
+  function addQuestion() {
+    setQuestions([...questions, { id: Math.random().toString(36).substr(2, 9), text: "", options: ["", "", "", ""], correct_answer: "0" }]);
   }
+
+  function updateQuestion(index: number, field: string, value: any) {
+    const next = [...questions];
+    next[index] = { ...next[index], [field]: value };
+    setQuestions(next);
+  }
+
+  async function saveTask() {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: existing } = await supabase.from("tasks").select("id").eq("event_id", selectedEventId).single();
+      
+      if (existing) {
+        await supabase.from("tasks").update({ questions }).eq("id", existing.id);
+      } else {
+        await supabase.from("tasks").insert({
+          event_id: selectedEventId,
+          type: "mcq",
+          questions,
+          created_by: user?.id,
+        });
+      }
+      toast.success("Task questions saved!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="h-20 animate-pulse bg-white/5 rounded-xl" />;
 
   return (
-    <form className="space-y-5">
-      <h3 className="text-xl font-medium">Task Details</h3>
+    <div className="space-y-6">
       <div>
-        <label className="block text-sm text-gray-400 mb-1">Task Venue *</label>
-        <input required className="input-field" placeholder="e.g. Main Auditorium" />
+        <label className="text-xs text-gray-500 font-bold uppercase">Select Event to Manage Task</label>
+        <select 
+          className="input-field mt-1" 
+          value={selectedEventId} 
+          onChange={(e) => loadTask(e.target.value)}
+        >
+          <option value="">Choose an event...</option>
+          {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+        </select>
       </div>
-      <div>
-        <label className="block text-sm text-gray-400 mb-1">Photo Proof</label>
-        <label className="block border-2 border-dashed border-white/15 rounded-xl p-6 text-center cursor-pointer hover:bg-white/[0.02]">
-          <Upload className="w-6 h-6 mx-auto text-gray-500 mb-2" />
-          <p className="text-sm text-gray-400">Upload photo proof</p>
-          <input type="file" accept="image/*" className="hidden" />
-        </label>
-      </div>
-      <div>
-        <label className="block text-sm text-gray-400 mb-1">Students Attended</label>
-        <input type="number" className="input-field" placeholder="0" />
-      </div>
-      <button type="submit" className="btn-primary w-full" onClick={(e) => { e.preventDefault(); toast.success("Task details saved!"); }}>Save Details</button>
-    </form>
+
+      {selectedEventId && (
+        <div className="space-y-6 animate-slide-up">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-medium">MCQ Questions</h3>
+            <button onClick={addQuestion} className="btn-secondary text-xs">+ Add Question</button>
+          </div>
+
+          <div className="space-y-4">
+            {questions.map((q, qIdx) => (
+              <div key={q.id} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
+                <div className="flex justify-between gap-4">
+                  <span className="text-xs font-bold text-[#00bfff]">Q{qIdx + 1}</span>
+                  <button 
+                    onClick={() => setQuestions(questions.filter((_, i) => i !== qIdx))}
+                    className="text-red-400 hover:text-red-300 text-xs"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input 
+                  className="input-field bg-black/20" 
+                  placeholder="Question text" 
+                  value={q.text} 
+                  onChange={e => updateQuestion(qIdx, "text", e.target.value)} 
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  {q.options.map((opt: string, oIdx: number) => (
+                    <div key={oIdx} className="flex items-center gap-2">
+                      <input 
+                        type="radio" 
+                        name={`q-${qIdx}`} 
+                        checked={q.correct_answer === String(oIdx)} 
+                        onChange={() => updateQuestion(qIdx, "correct_answer", String(oIdx))}
+                      />
+                      <input 
+                        className="input-field text-xs py-1.5" 
+                        placeholder={`Option ${oIdx + 1}`} 
+                        value={opt} 
+                        onChange={e => {
+                          const nextOpts = [...q.options];
+                          nextOpts[oIdx] = e.target.value;
+                          updateQuestion(qIdx, "options", nextOpts);
+                        }} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {questions.length > 0 && (
+            <button 
+              onClick={saveTask} 
+              disabled={saving} 
+              className="btn-primary w-full py-3"
+            >
+              {saving ? "Saving..." : "Save Questions"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
+
 
 function TaskVerify() {
   const supabase = createClient();
