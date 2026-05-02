@@ -321,6 +321,7 @@ export default function MemberSocietyPage() {
           <div className="hidden lg:block lg:col-span-3">
             <SocietySidebar 
               profile={profile}
+              societies={societies}
               selectedSocieties={selectedSocieties}
               onSocietyChange={(id) => {
                 if (id === "all") setSelectedSocieties(["all"]);
@@ -342,6 +343,7 @@ export default function MemberSocietyPage() {
           <div className="col-span-1 lg:col-span-6 space-y-8">
             <PostCreator 
               userProfile={profile} 
+              societies={societies}
               onPostCreated={() => { fetchPosts(); fetchStats(); }} 
             />
             

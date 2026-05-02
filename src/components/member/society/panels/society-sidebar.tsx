@@ -4,6 +4,7 @@ import { ShieldCheck, UserCircle, LayoutGrid } from "lucide-react";
 
 interface SocietySidebarProps {
   profile: any;
+  societies: any[];
   selectedSocieties: string[];
   onSocietyChange: (id: string) => void;
   selectedCategory: string;
@@ -12,6 +13,7 @@ interface SocietySidebarProps {
 
 export function SocietySidebar({ 
   profile, 
+  societies,
   selectedSocieties, 
   onSocietyChange, 
   selectedCategory, 
@@ -64,7 +66,7 @@ export function SocietySidebar({
           >
             All Societies
           </button>
-          {SOCIETIES.map((s) => (
+          {societies.map((s) => (
             <button
               key={s.id}
               onClick={() => onSocietyChange(s.id)}

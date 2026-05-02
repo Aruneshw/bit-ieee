@@ -10,10 +10,11 @@ import { createClient } from "@/lib/supabase/client";
 
 interface PostCreatorProps {
   userProfile: any;
+  societies: any[];
   onPostCreated: () => void;
 }
 
-export function PostCreator({ userProfile, onPostCreated }: PostCreatorProps) {
+export function PostCreator({ userProfile, societies, onPostCreated }: PostCreatorProps) {
   const supabase = createClient();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -206,7 +207,7 @@ export function PostCreator({ userProfile, onPostCreated }: PostCreatorProps) {
                     </div>
 
                     {userProfile?.role?.includes("admin") ? (
-                      SOCIETIES.map(soc => (
+                      societies.map(soc => (
                         <div 
                           key={soc.id}
                           onClick={() => setFormData(p => ({ ...p, identityType: "society", societyId: soc.id }))}
