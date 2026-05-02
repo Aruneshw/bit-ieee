@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Post } from "../types";
 import { 
   Heart, MessageCircle, Share2, MoreHorizontal, 
-  CheckCircle2, ChevronDown, ChevronUp, Trash2 
+  CheckCircle2, ChevronDown, ChevronUp, Trash2,
+  ShieldCheck, Edit
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -13,24 +14,28 @@ interface PostCardProps {
   onLike: (postId: string) => void;
   onComment: (postId: string, text: string) => void;
   onDelete: (postId: string) => void;
+  onEdit: (postId: string, newTitle: string, newDesc: string) => void;
 }
 
-export function PostCard({ post, currentUserId, currentUserRole, onLike, onComment, onDelete }: PostCardProps) {
+export function PostCard({ post, currentUserId, currentUserRole, onLike, onComment, onDelete, onEdit }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({ title: post.title || "", description: post.description });
   const [commentText, setCommentText] = useState("");
   const isLiked = post.likes.includes(currentUserId);
 
   const isAuthor = currentUserId === post.created_by.userId;
   const isUserAdmin = currentUserRole?.includes("admin");
   const canDelete = isAuthor || isUserAdmin;
+  const canEdit = isUserAdmin; // As per request: admin can also edit
 
   const isAdmin = post.created_by.identityType === "individual" && post.author?.role?.includes("admin");
   const isSociety = post.created_by.identityType === "society";
   
   const displayName = isSociety 
     ? `${post.society?.abbreviation || "IEEE"} Branch` 
-    : post.created_by.displayName;
+    : (post.created_by.displayName === "Unknown" ? "IEEE Member" : post.created_by.displayName);
 
   const subtitle = isSociety
     ? `${post.society?.name || "IEEE Society"}`
@@ -38,6 +43,46 @@ export function PostCard({ post, currentUserId, currentUserRole, onLike, onComme
 
   return (
     <div className="glass-card p-0 border border-white/5 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+      {/* Edit Modal Overlay */}
+      {isEditing && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsEditing(false)} />
+          <div className="relative glass-card w-full max-w-lg border border-white/10 shadow-2xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-blue-400" /> Edit Community Post
+            </h3>
+            <div className="space-y-4">
+              <input 
+                type="text"
+                className="input-field"
+                placeholder="Post Title (Optional)"
+                value={editData.title}
+                onChange={(e) => setEditData(p => ({ ...p, title: e.target.value }))}
+              />
+              <textarea 
+                rows={5}
+                className="input-field resize-none"
+                placeholder="Description"
+                value={editData.description}
+                onChange={(e) => setEditData(p => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button onClick={() => setIsEditing(false)} className="btn-secondary px-6">Cancel</button>
+              <button 
+                onClick={() => {
+                  onEdit(post.id, editData.title, editData.description);
+                  setIsEditing(false);
+                }} 
+                className="btn-primary px-8"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Post Header */}
       <div className="p-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
