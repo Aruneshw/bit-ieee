@@ -444,7 +444,6 @@ function Step3Form({
     resolver: zodResolver(step3Schema),
     defaultValues: {
       primary_skills: [],
-      secondary_skills: [],
       github: "",
       linkedin: "",
       portfolio: "",
