@@ -83,7 +83,7 @@ export function CalendarView() {
 
   // Filter events based on toggle
   const displayedEvents = events.filter((e) => 
-    viewMode === "ieee" ? e.is_ieee_official : !e.is_ieee_official
+    viewMode === "ieee" ? e.is_ieee_official : true
   );
 
   return (
