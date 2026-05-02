@@ -236,6 +236,23 @@ export default function MemberSocietyPage() {
     }
   };
 
+  const handleEdit = async (postId: string, newTitle: string, newDesc: string) => {
+    try {
+      const combinedContent = newTitle ? `[${newTitle}] ${newDesc}` : newDesc;
+      const { error } = await supabase
+        .from("posts")
+        .update({ content: combinedContent })
+        .eq("id", postId);
+
+      if (error) throw error;
+      toast.success("Post updated successfully");
+      await fetchPosts();
+    } catch (err: any) {
+      console.error("Edit error:", err);
+      toast.error("Failed to update post");
+    }
+  };
+
   const handleAdminAction = async (postId: string, action: "approve" | "reject" | "delete") => {
     if (action === "delete") {
       await supabase.from("posts").delete().eq("id", postId);
@@ -343,6 +360,7 @@ export default function MemberSocietyPage() {
                     onLike={handleLike}
                     onComment={handleComment}
                     onDelete={(id) => handleAdminAction(id, "delete")}
+                    onEdit={handleEdit}
                   />
                 ))
               )}
