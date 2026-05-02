@@ -324,8 +324,10 @@ export default function MemberSocietyPage() {
                     key={post.id} 
                     post={post} 
                     currentUserId={profile?.id}
+                    currentUserRole={profile?.role}
                     onLike={handleLike}
                     onComment={handleComment}
+                    onDelete={(id) => handleAdminAction(id, "delete")}
                   />
                 ))
               )}

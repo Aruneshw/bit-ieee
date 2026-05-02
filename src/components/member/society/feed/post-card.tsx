@@ -2,21 +2,28 @@ import React, { useState } from "react";
 import { Post } from "../types";
 import { 
   Heart, MessageCircle, Share2, MoreHorizontal, 
-  CheckCircle2, ChevronDown, ChevronUp 
+  CheckCircle2, ChevronDown, ChevronUp, Trash2 
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface PostCardProps {
   post: Post;
   currentUserId: string;
+  currentUserRole?: string;
   onLike: (postId: string) => void;
   onComment: (postId: string, text: string) => void;
+  onDelete: (postId: string) => void;
 }
 
-export function PostCard({ post, currentUserId, onLike, onComment }: PostCardProps) {
+export function PostCard({ post, currentUserId, currentUserRole, onLike, onComment, onDelete }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [commentText, setCommentText] = useState("");
   const isLiked = post.likes.includes(currentUserId);
+
+  const isAuthor = currentUserId === post.created_by.userId;
+  const isUserAdmin = currentUserRole?.includes("admin");
+  const canDelete = isAuthor || isUserAdmin;
 
   const isAdmin = post.created_by.identityType === "individual" && post.author?.role?.includes("admin");
   const isSociety = post.created_by.identityType === "society";
@@ -51,9 +58,30 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
             </p>
           </div>
         </div>
-        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        <div className="relative">
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+          
+          {showMenu && canDelete && (
+            <div className="absolute right-0 top-10 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-20 overflow-hidden animate-in zoom-in-95 duration-200">
+              <button 
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this post permanently?")) {
+                    onDelete(post.id);
+                  }
+                  setShowMenu(false);
+                }}
+                className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Post
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Collaboration Tag */}
