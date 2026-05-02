@@ -109,6 +109,7 @@ export default function BookingsPage() {
         <p className="text-[var(--text-secondary)]">Browse and book upcoming events in your society.</p>
       </div>
 
+      {events.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <Calendar className="w-12 h-12 mx-auto text-[var(--text-muted)] mb-4" />
           <h3 className="text-xl font-medium text-[var(--text-secondary)]">No Events Available</h3>
