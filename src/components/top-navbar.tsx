@@ -8,7 +8,7 @@ import { getRoleLabel, getRoleColor, type UserRole, type UserProfile } from "@/l
 import {
   LayoutDashboard, Users, UserPlus, Activity, Bell, CheckSquare,
   CalendarDays, FileText, Megaphone, LogOut, Table,
-  Zap, Info, MessageSquare, BookOpen,
+  Zap, Info, MessageSquare, BookOpen, ChevronDown,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -133,15 +133,15 @@ export default function TopNavbar({ user }: { user: UserProfile }) {
         </div>
 
         {/* Center: Horizontal Navigation Tabs */}
-        <div className="hidden lg:flex items-center gap-1 flex-1 justify-center px-8 overflow-x-auto no-scrollbar">
-          {navItems.map((item) => {
+        <div className="hidden lg:flex items-center gap-1 flex-1 justify-center px-8 overflow-visible">
+          {navItems.slice(0, 7).map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                   isActive 
                     ? "bg-white/15 text-white shadow-sm" 
                     : "text-blue-100 hover:bg-white/5 hover:text-white"
@@ -157,6 +157,37 @@ export default function TopNavbar({ user }: { user: UserProfile }) {
               </Link>
             );
           })}
+
+          {/* "More" Dropdown for remaining items */}
+          {navItems.length > 7 && (
+            <div className="relative group">
+              <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-white/5 hover:text-white transition-all whitespace-nowrap">
+                <span>More</span>
+                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+              </button>
+              
+              <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-left scale-95 group-hover:scale-100 z-[60]">
+                {navItems.slice(7).map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-2 text-sm transition-colors",
+                        isActive 
+                          ? "bg-blue-50 text-[#00629B] font-semibold" 
+                          : "text-gray-700 hover:bg-gray-50"
+                      )}
+                    >
+                      <span className={cn(isActive ? "text-[#00629B]" : "text-gray-400")}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: User Profile & Logout */}
