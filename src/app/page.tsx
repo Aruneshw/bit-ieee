@@ -3,131 +3,173 @@ import { ArrowRight, ShieldCheck, Users, Activity, Trophy, Zap, Globe, BookOpen 
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen relative overflow-hidden">
-      {/* Animated Background Orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-15%] left-[-10%] w-[45%] h-[45%] rounded-full bg-[#00629B]/20 blur-[150px] animate-pulse" />
-        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#00bfff]/12 blur-[180px]" />
-        <div className="absolute top-[40%] right-[20%] w-[25%] h-[25%] rounded-full bg-[#004d7a]/15 blur-[120px]" />
-      </div>
-
-      {/* Subtle Grid Pattern Overlay */}
-      <div 
-        className="fixed inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
-        }}
-      />
-
-      {/* Header */}
-      <header className="relative z-10 flex items-center justify-between p-6 md:px-12">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00629B] to-[#00bfff] flex items-center justify-center shadow-lg shadow-[#00bfff]/20">
-            <Zap className="w-5 h-5 text-white" />
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* IEEE Blue Header (Inspired by Google Developers layout) */}
+      <header className="sticky top-0 z-50 bg-[#00629B] shadow-md px-6 md:px-12 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Logo area (Google Developers style) */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded bg-white flex items-center justify-center">
+                <Zap className="w-5 h-5 text-[#00629B]" />
+              </div>
+              <div className="h-6 w-px bg-white/20 mx-2 hidden sm:block" />
+              <h1 className="text-xl font-bold text-white tracking-tight">
+                BIT <span className="font-light opacity-90">IEEE HUB</span>
+              </h1>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold tracking-wide text-white">BIT IEEE HUB</h2>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest">BITS Sathy</p>
-          </div>
+
+          <nav className="flex items-center gap-4">
+            <Link 
+              href="/login" 
+              className="px-6 py-2 rounded-full border border-white/20 text-white font-medium hover:bg-white/10 transition-all text-sm"
+            >
+              Sign In
+            </Link>
+          </nav>
         </div>
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-          <Link href="/login" className="px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md transition-all text-white hover:-translate-y-0.5">
-            Sign In
-          </Link>
-        </nav>
       </header>
 
-      {/* Hero Section */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center mt-8 md:mt-16">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00629B]/15 border border-[#00629B]/30 text-[#00bfff] text-xs font-semibold mb-8 uppercase tracking-wider">
-          <span className="w-2 h-2 rounded-full bg-[#00bfff] animate-pulse" />
-          Official BITS Sathy IEEE Portal
-        </div>
+      {/* Hero Section (IEEE Blue Background) */}
+      <section className="relative bg-[#00629B] py-20 md:py-32 overflow-hidden">
+        {/* Engineering Pattern Overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.05] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+            backgroundSize: '40px 40px',
+          }}
+        />
         
-        <h1 className="font-heading text-6xl md:text-8xl lg:text-9xl leading-none mb-6 tracking-wide">
-          Empower Your <br className="hidden md:block" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00bfff] via-[#00629B] to-[#00bfff]">
-            Engineering Journey
-          </span>
-        </h1>
-        
-        <p className="max-w-2xl text-lg md:text-xl text-gray-400 mb-12 leading-relaxed">
-          The ultimate platform for BITS Sathy students to manage societies, track activity points, 
-          build dynamic resumes, and engage in exclusive IEEE events.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <Link
-            href="/login"
-            className="group relative flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#00629B] to-[#00bfff] rounded-full font-bold text-white shadow-lg shadow-[#00bfff]/25 hover:shadow-[#00bfff]/40 transition-all hover:-translate-y-1"
-          >
-            Get Started
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-
-        {/* Stats Bar */}
-        <div className="flex flex-wrap justify-center gap-8 md:gap-16 mt-20 py-6 px-8 rounded-2xl glass-card max-w-3xl w-full">
-          <StatItem value="12" label="IEEE Societies" />
-          <StatItem value="500+" label="Active Members" />
-          <StatItem value="100+" label="Events Annually" />
-          <StatItem value="24/7" label="Portal Access" />
-        </div>
-
-        {/* Features Grid */}
-        <div id="features" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-24 max-w-6xl w-full text-left">
-          <FeatureCard 
-            icon={<ShieldCheck className="w-6 h-6" />}
-            title="Role-Based Access"
-            description="Secure environment tailored for Members, Leaders, Reps, and Admins."
-          />
-          <FeatureCard 
-            icon={<Activity className="w-6 h-6" />}
-            title="Activity Points"
-            description="Earn and track points by attending events, workshops, and tasks."
-          />
-          <FeatureCard 
-            icon={<Users className="w-6 h-6" />}
-            title="12 Societies"
-            description="Manage and engage with 12 specialized IEEE technical societies."
-          />
-          <FeatureCard 
-            icon={<Trophy className="w-6 h-6" />}
-            title="Auto-Resume"
-            description="Your achievements automatically build a professional resume."
-          />
-        </div>
-
-        {/* Societies Section */}
-        <div id="societies" className="mt-32 max-w-6xl w-full">
-          <h2 className="text-4xl md:text-5xl font-heading tracking-wide text-center mb-4">
-            IEEE <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00bfff] to-[#00629B]">Societies</span>
-          </h2>
-          <p className="text-gray-400 text-center mb-12 max-w-xl mx-auto">
-            Join any of our specialized technical societies and contribute to cutting-edge engineering communities.
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {societies.map((society, index) => (
-              <div 
-                key={index}
-                className="glass-card-hover p-4 text-center group"
+        <div className="relative z-10 max-w-7xl mx-auto px-6 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-12">
+          <div className="flex-1 space-y-6">
+            <div className="inline-block px-3 py-1 rounded bg-[#00bfff]/20 border border-[#00bfff]/30 text-[#00bfff] text-[10px] font-bold uppercase tracking-[0.2em]">
+              Student Branch Portal
+            </div>
+            <h2 className="text-5xl md:text-7xl font-bold text-white leading-[1.1] tracking-tight">
+              Advancing Technology <br />
+              <span className="text-[#00bfff]">for Humanity.</span>
+            </h2>
+            <p className="text-xl text-blue-100/80 max-w-xl leading-relaxed">
+              The central hub for BIT Sathy students to engage with 12 specialized IEEE technical societies, 
+              track activity points, and build professional engineering resumes.
+            </p>
+            <div className="pt-4">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-white text-[#00629B] rounded-lg font-bold shadow-xl hover:bg-blue-50 transition-all hover:-translate-y-1"
               >
-                <div className="w-10 h-10 mx-auto rounded-lg bg-gradient-to-br from-[#00629B]/20 to-[#00bfff]/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Globe className="w-5 h-5 text-[#00bfff]" />
+                Get Started
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex-1 hidden lg:block">
+            {/* Visual element (IEEE Blue 3D-ish card) */}
+            <div className="relative w-full aspect-square max-w-md mx-auto">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#00bfff]/20 to-transparent rounded-full blur-3xl" />
+              <div className="relative glass-card p-8 border-white/20 bg-white/5 backdrop-blur-xl rotate-3 translate-x-4">
+                <div className="space-y-4">
+                  <div className="h-4 w-1/3 bg-white/20 rounded" />
+                  <div className="h-10 w-full bg-white/10 rounded" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="h-20 bg-white/5 rounded" />
+                    <div className="h-20 bg-white/5 rounded" />
+                  </div>
                 </div>
-                <p className="font-bold text-sm text-white">{society.abbr}</p>
-                <p className="text-xs text-gray-500 mt-1 leading-tight">{society.name}</p>
               </div>
-            ))}
+              <div className="absolute top-10 left-0 glass-card p-6 border-white/20 bg-white/10 backdrop-blur-xl -rotate-6 -translate-x-4">
+                <Trophy className="w-12 h-12 text-[#00bfff] mb-4" />
+                <div className="h-4 w-24 bg-white/20 rounded" />
+              </div>
+            </div>
           </div>
         </div>
+      </section>
+
+      {/* Main Content (White Background like IEEE.org) */}
+      <main className="flex-1 bg-white">
+        {/* Stats Section */}
+        <div className="max-w-7xl mx-auto px-6 -mt-12 relative z-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-0.5 bg-gray-200 border border-gray-200 rounded-xl overflow-hidden shadow-2xl">
+            <StatItem value="12" label="Technical Societies" />
+            <StatItem value="500+" label="Active Members" />
+            <StatItem value="100+" label="Annual Events" />
+            <StatItem value="24/7" label="Cloud Access" />
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <section className="py-24 max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h3 className="text-4xl font-bold text-gray-900 mb-4">Core Ecosystem</h3>
+            <p className="text-gray-500 max-w-2xl mx-auto">
+              Experience a streamlined engineering environment designed to boost your career trajectory.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <FeatureCard 
+              icon={<ShieldCheck className="w-6 h-6" />}
+              title="Secure Access"
+              description="Role-based management for Members, Leaders, and Branch Counselors."
+            />
+            <FeatureCard 
+              icon={<Activity className="w-6 h-6" />}
+              title="Point Tracking"
+              description="Automated logging of IEEE activity points for every event attended."
+            />
+            <FeatureCard 
+              icon={<Users className="w-6 h-6" />}
+              title="Collaborate"
+              description="Connect with peers across various disciplines and technical societies."
+            />
+            <FeatureCard 
+              icon={<Trophy className="w-6 h-6" />}
+              title="IEEE Resume"
+              description="Instantly generate a verified PDF resume based on your SB contributions."
+            />
+          </div>
+        </section>
+
+        {/* Societies Grid (Inspired by IEEE.org landing grid) */}
+        <section className="bg-gray-50 py-24">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex flex-col md:flex-row items-end justify-between gap-6 mb-12">
+              <div className="max-w-xl">
+                <h3 className="text-4xl font-bold text-gray-900 mb-4">Technical Societies</h3>
+                <p className="text-gray-500">
+                  Join the world's largest technical professional organization dedicated to advancing technology.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {societies.map((society, index) => (
+                <div 
+                  key={index}
+                  className="bg-white p-6 border border-gray-100 hover:border-[#00629B] hover:shadow-lg transition-all group"
+                >
+                  <p className="font-bold text-[#00629B] mb-2">{society.abbr}</p>
+                  <p className="text-sm text-gray-600 leading-tight">{society.name}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-8 border-t border-white/5 mt-32 text-center text-gray-500 text-sm">
-        <p>&copy; {new Date().getFullYear()} BITS Sathy IEEE Student Branch. All rights reserved.</p>
+      <footer className="bg-[#001a2c] py-12 text-center text-gray-400 text-sm">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <Zap className="w-5 h-5 text-[#00bfff]" />
+            <span className="font-bold text-white tracking-widest uppercase text-xs">BIT IEEE HUB</span>
+          </div>
+          <p>&copy; {new Date().getFullYear()} BITS Sathy IEEE Student Branch. All rights reserved.</p>
+        </div>
       </footer>
     </div>
   );
@@ -135,21 +177,21 @@ export default function Home() {
 
 function StatItem({ value, label }: { value: string; label: string }) {
   return (
-    <div className="text-center">
-      <p className="text-2xl md:text-3xl font-bold text-white">{value}</p>
-      <p className="text-xs text-gray-400 mt-1">{label}</p>
+    <div className="bg-white p-8 text-center">
+      <p className="text-3xl font-bold text-[#00629B]">{value}</p>
+      <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">{label}</p>
     </div>
   );
 }
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="glass-card-hover p-6 group">
-      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#00629B]/20 to-[#00bfff]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform text-[#00bfff]">
+    <div className="p-8 border border-gray-100 rounded-xl hover:shadow-xl transition-all hover:border-[#00bfff]/30 group">
+      <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mb-6 text-[#00629B] group-hover:scale-110 transition-transform">
         {icon}
       </div>
-      <h3 className="text-xl font-heading tracking-wide mb-2 text-white">{title}</h3>
-      <p className="text-gray-400 text-sm leading-relaxed">{description}</p>
+      <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
+      <p className="text-gray-500 text-sm leading-relaxed">{description}</p>
     </div>
   );
 }
