@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { SocietySidebar } from "@/components/member/society/panels/society-sidebar";
 import { TrendingPanel } from "@/components/member/society/panels/trending-panel";
 import { PostCreator } from "@/components/member/society/post-creator";
@@ -14,10 +14,18 @@ import { ShieldCheck, MessageSquare } from "lucide-react";
 export default function MemberSocietyPage() {
   const supabase = createClient();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [societies, setSocieties] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"feed" | "admin">("feed");
   
+  // Stats state
+  const [stats, setStats] = useState({
+    totalMembers: 0,
+    postsThisMonth: 0,
+    activeSocieties: 0
+  });
+
   // Filters
   const [selectedSocieties, setSelectedSocieties] = useState<string[]>(["all"]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -34,62 +42,170 @@ export default function MemberSocietyPage() {
           .single();
         setProfile(userData);
       }
+
+      // Fetch all societies for filters and stats
+      const { data: societiesData } = await supabase.from("societies").select("*");
+      setSocieties(societiesData || []);
+
       await fetchPosts();
+      await fetchStats();
       setLoading(false);
     }
     init();
   }, []);
 
   async function fetchPosts() {
-    // In production, this would filter by status: "approved" for non-admins
     const { data, error } = await supabase
       .from("posts")
-      .select("*, author:users(name, role), society:societies(name, abbreviation)");
+      .select("*, author:users(name, role), society:societies(name, abbreviation), interactions:post_interactions(id, type, user_id, comment_text, user:users(name, role))");
     
     if (error) {
       console.error("Error fetching posts:", error);
       return;
     }
 
-    // Transform and filter (Mocking full field mapping)
-    const transformedPosts = (data || []).map(p => ({
-      ...p,
-      title: p.content.startsWith('[') ? p.content.split('\n')[0].slice(1, -1) : null,
-      description: p.content.startsWith('[') ? p.content.split('\n').slice(1).join('\n') : p.content,
-      category: "general", // Mock
-      media: p.media_url ? [p.media_url] : [],
-      created_by: {
-        userId: p.author_id,
-        displayName: p.author?.name || "Unknown",
-        identityType: "individual",
-        societyId: p.society_id
-      },
-      collaborators: [],
-      status: p.status || "approved",
-      moderation_flag: false,
-      flag_reason: "none",
-      likes: [],
-      saves: [],
-      comment_count: 0,
-      created_at: p.created_at,
-      updated_at: p.updated_at
-    })) as Post[];
+    const transformedPosts = (data || []).map(p => {
+      // Logic to extract title if it exists in bracketed format
+      const hasTitle = p.content.startsWith('[') && p.content.includes(']');
+      const title = hasTitle ? p.content.split(']')[0].slice(1) : null;
+      const description = hasTitle ? p.content.split(']').slice(1).join(']').trim() : p.content;
+
+      const interactions = p.interactions || [];
+      const likes = interactions.filter((i: any) => i.type === "like").map((i: any) => i.user_id);
+
+      return {
+        ...p,
+        title,
+        description,
+        category: "general", // This could be stored in a column if added later
+        media: p.media_url ? [p.media_url] : [],
+        created_by: {
+          userId: p.author_id,
+          displayName: p.author?.name || "Unknown",
+          identityType: p.society_id ? "society" : "individual",
+          societyId: p.society_id
+        },
+        collaborators: [],
+        status: p.status || "approved",
+        moderation_flag: false,
+        flag_reason: "none",
+        likes,
+        saves: [],
+        comment_count: interactions.filter((i: any) => i.type === "comment").length,
+        created_at: p.created_at,
+        updated_at: p.updated_at
+      };
+    }) as Post[];
 
     setPosts(transformedPosts);
   }
 
-  const handleLike = (postId: string) => {
-    // Logic for liking
-    toast.success("Post liked!");
+  async function fetchStats() {
+    // 1. Total Members
+    const { count: memberCount } = await supabase.from("users").select("*", { count: "exact", head: true });
+    
+    // 2. Posts this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const { count: postCount } = await supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", startOfMonth.toISOString());
+
+    // 3. Active Societies (Societies with at least one approved post)
+    const activeSids = new Set(posts.filter(p => p.status === "approved" && p.created_by.societyId).map(p => p.created_by.societyId));
+
+    setStats({
+      totalMembers: memberCount || 0,
+      postsThisMonth: postCount || 0,
+      activeSocieties: activeSids.size || 0
+    });
+  }
+
+  // Derive Society Stats for Trending Panel
+  const societyStats = useMemo(() => {
+    const statsMap: { [key: string]: number } = {};
+    posts.forEach(p => {
+      if (p.status === "approved" && p.society?.name) {
+        statsMap[p.society.name] = (statsMap[p.society.name] || 0) + 1;
+      }
+    });
+
+    const colors = ["bg-blue-500", "bg-purple-500", "bg-orange-500", "bg-green-500", "bg-pink-500"];
+    return Object.entries(statsMap)
+      .map(([name, count], i) => ({
+        name,
+        count,
+        color: colors[i % colors.length]
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [posts]);
+
+  // Derive Trending Tags (Simple keyword frequency for now)
+  const trendingTags = useMemo(() => {
+    const words: { [key: string]: number } = {};
+    posts.forEach(p => {
+      if (p.status === "approved") {
+        const text = `${p.title || ""} ${p.description}`.toLowerCase();
+        const matches = text.match(/#\w+/g);
+        if (matches) {
+          matches.forEach(tag => {
+            const cleanTag = tag.slice(1);
+            words[cleanTag] = (words[cleanTag] || 0) + 1;
+          });
+        }
+      }
+    });
+
+    return Object.entries(words)
+      .map(([tag, count]) => ({ tag, count: `${count} posts` }))
+      .sort((a, b) => parseInt(b.count) - parseInt(a.count))
+      .slice(0, 5);
+  }, [posts]);
+
+  const handleLike = async (postId: string) => {
+    if (!profile) return;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const isLiked = post.likes.includes(profile.id);
+
+    if (isLiked) {
+      await supabase.from("post_interactions").delete().match({ post_id: postId, user_id: profile.id, type: "like" });
+    } else {
+      await supabase.from("post_interactions").insert({ post_id: postId, user_id: profile.id, type: "like" });
+    }
+    
+    fetchPosts();
   };
 
-  const handleComment = (postId: string, text: string) => {
-    // Logic for commenting
+  const handleComment = async (postId: string, text: string) => {
+    if (!profile || !text.trim()) return;
+
+    const { error } = await supabase.from("post_interactions").insert({
+      post_id: postId,
+      user_id: profile.id,
+      type: "comment",
+      comment_text: text
+    });
+
+    if (error) {
+      toast.error("Failed to share comment");
+      return;
+    }
+
     toast.success("Comment shared!");
+    fetchPosts();
   };
 
   const handleAdminAction = async (postId: string, action: "approve" | "reject" | "delete") => {
-    // In production: await supabase.from("posts").update({ status: action }).eq("id", postId);
+    if (action === "delete") {
+      await supabase.from("posts").delete().eq("id", postId);
+    } else {
+      await supabase.from("posts").update({ status: action }).eq("id", postId);
+    }
     toast.success(`Post ${action}d successfully`);
     fetchPosts();
   };
@@ -112,7 +228,7 @@ export default function MemberSocietyPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-          <p className="text-sm text-gray-500 font-medium">Loading IEEE Community...</p>
+          <p className="text-sm text-gray-500 font-medium">Synchronizing IEEE Hub...</p>
         </div>
       </div>
     );
@@ -121,7 +237,6 @@ export default function MemberSocietyPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6">
       
-      {/* Admin Toggle (Visible only to admins) */}
       {isAdmin && (
         <div className="flex justify-center mb-8">
           <div className="bg-white/5 p-1 rounded-2xl border border-white/5 flex gap-1">
@@ -148,9 +263,8 @@ export default function MemberSocietyPage() {
       {view === "admin" ? (
         <AdminPanel posts={posts} onAction={handleAdminAction} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12">
           
-          {/* Left Panel */}
           <div className="hidden lg:block lg:col-span-3">
             <SocietySidebar 
               profile={profile}
@@ -172,11 +286,10 @@ export default function MemberSocietyPage() {
             />
           </div>
 
-          {/* Center Feed */}
           <div className="col-span-1 lg:col-span-6 space-y-8">
             <PostCreator 
               userProfile={profile} 
-              onPostCreated={fetchPosts} 
+              onPostCreated={() => { fetchPosts(); fetchStats(); }} 
             />
             
             <div className="space-y-6">
@@ -198,9 +311,12 @@ export default function MemberSocietyPage() {
             </div>
           </div>
 
-          {/* Right Panel */}
           <div className="hidden lg:block lg:col-span-3">
-            <TrendingPanel />
+            <TrendingPanel 
+              stats={stats} 
+              societyStats={societyStats} 
+              trendingTags={trendingTags} 
+            />
           </div>
 
         </div>
