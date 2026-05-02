@@ -131,7 +131,7 @@ export function PostCreator({ userProfile, onPostCreated }: PostCreatorProps) {
       resetForm();
     } catch (err: any) {
       console.error(err);
-      toast.error("Unable to complete your request. Please try again later.");
+      toast.error(err.message || "Unable to complete your request. Please try again later.");
     } finally {
       setSubmitting(false);
     }
