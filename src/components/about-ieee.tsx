@@ -24,8 +24,8 @@ export function AboutIEEE() {
       <section className="relative p-8 rounded-3xl overflow-hidden border border-white/5 bg-white/[0.02]">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#00629B]/10 blur-[100px] -mr-32 -mt-32" />
         <div className="relative z-10">
-          <h1 className="text-4xl font-heading tracking-wide mb-6">About IEEE</h1>
-          <p className="text-lg leading-relaxed text-gray-400 max-w-4xl">
+          <h1 className="text-4xl font-heading tracking-wide mb-6 text-[var(--text-primary)]">About IEEE</h1>
+          <p className="text-lg leading-relaxed text-[var(--text-secondary)] max-w-4xl">
             IEEE is the world's largest technical professional organization dedicated to advancing technology for the benefit of humanity. 
             IEEE and its members inspire a global community to innovate for a better tomorrow through its highly cited publications, 
             conferences, technology standards, and professional and educational activities. IEEE is the trusted “voice” for engineering, 
@@ -54,14 +54,14 @@ export function AboutIEEE() {
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold tracking-widest text-[#00bfff] uppercase">
+                  <span className="text-[10px] font-bold tracking-widest text-[#00629B] uppercase">
                     {soc.abbr}
                   </span>
-                  <h3 className="font-semibold text-white group-hover:text-[#00bfff] transition-colors leading-tight">
+                  <h3 className="font-semibold text-[var(--text-primary)] group-hover:text-[#00629B] transition-colors leading-tight">
                     {soc.name}
                   </h3>
                 </div>
-                <ExternalLink className="w-4 h-4 text-gray-600 group-hover:text-[#00bfff] transition-all opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0" />
+                <ExternalLink className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[#00629B] transition-all opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0" />
               </div>
             </a>
           ))}
@@ -70,7 +70,7 @@ export function AboutIEEE() {
 
       {/* Footer Note */}
       <div className="p-6 rounded-2xl border border-dashed border-white/10 text-center">
-        <p className="text-sm text-gray-500 italic">
+        <p className="text-sm text-[var(--text-muted)] italic">
           Explore more about our global community and technical societies by clicking the links above.
         </p>
       </div>

@@ -26,8 +26,8 @@
     --bg-sidebar: #f1f5f9;
     --border: #e2e8f0;
     --text-primary: #000000;
-    --text-secondary: #334155;
-    --text-muted: #64748b;
+    --text-secondary: #0f172a;
+    --text-muted: #334155;
     --accent-primary: #00629B;
     --accent-secondary: #004d7a;
     --accent-gold: #f59e0b;
@@ -241,6 +241,17 @@
 }
 
 /* =========================================================
+ * IEEE Hub Theme Tokens (Light/Dark) - Applied in UI
+ * ========================================================= */
+<h1 className="text-4xl font-heading tracking-wide mb-6 text-[var(--text-primary)]">About IEEE</h1>
+          <p className="text-lg leading-relaxed text-[var(--text-secondary)] max-w-4xl">
+            IEEE is the world's largest technical professional organization dedicated to advancing technology for the benefit of humanity. 
+            IEEE and its members inspire a global community to innovate for a better tomorrow through its highly cited publications, 
+            conferences, technology standards, and professional and educational activities. IEEE is the trusted “voice” for engineering, 
+            computing, and technology information around the globe.
+          </p>
+
+/* =========================================================
  * React Big Calendar Mobile Fixes
  * ========================================================= */
 @media (max-width: 640px) {
@@ -251,6 +262,10 @@
     gap: 8px;
     margin-bottom: 15px !important;
   }
+
+        <p className="text-sm text-[var(--text-muted)] italic">
+          Explore more about our global community and technical societies by clicking the links above.
+        </p>
 
   .rbc-toolbar-label {
     order: -1;
