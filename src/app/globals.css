@@ -20,21 +20,21 @@
    * ========================================================= */
   :root,
   [data-theme="light"] {
-    --bg-primary: #00629B; /* Pantone 3015 C */
-    --bg-secondary: #005080;
-    --bg-card: rgba(255, 255, 255, 0.15);
-    --bg-sidebar: #004d7a;
-    --border: rgba(255, 255, 255, 0.25);
-    --text-primary: #ffffff;
-    --text-secondary: #e0f2fe;
-    --text-muted: #bae6fd;
-    --accent-primary: #00bfff; /* Electric blue for contrast */
-    --accent-secondary: #0099cc;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-sidebar: #f1f5f9;
+    --border: #e2e8f0;
+    --text-primary: #000000;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --accent-primary: #00629B;
+    --accent-secondary: #004d7a;
     --accent-gold: #f59e0b;
-    --success: #22c55e;
-    --warning: #fbbf24;
-    --danger: #ef4444;
-    --shadow: rgba(0, 0, 0, 0.15);
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --shadow: rgba(0, 0, 0, 0.05);
     --radius-card: 12px;
     --radius-button: 8px;
     --radius-input: 8px;
@@ -87,8 +87,8 @@
   }
 
   body {
-    background: #ffffff;
-    color: #1a202c;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -98,7 +98,7 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     letter-spacing: 0.02em;
-    color: #001a2c;
+    color: var(--text-primary);
   }
 }
 
