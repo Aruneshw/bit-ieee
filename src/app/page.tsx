@@ -32,7 +32,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section (IEEE Blue Background) */}
-      <section className="relative bg-[#00629B] pt-20 pb-28 md:pt-32 md:pb-40 overflow-hidden">
+      <section className="relative bg-[#00629B] pt-20 pb-32 md:pt-32 md:pb-48 overflow-hidden">
         {/* Engineering Pattern Overlay */}
         <div 
           className="absolute inset-0 opacity-[0.05] pointer-events-none"
@@ -92,7 +92,7 @@ export default function Home() {
       {/* Main Content (White Background like IEEE.org) */}
       <main className="flex-1 bg-white">
         {/* Stats Section */}
-        <div className="max-w-7xl mx-auto px-6 -mt-16 md:-mt-20 relative z-20">
+        <div className="max-w-7xl mx-auto px-6 -mt-12 md:-mt-16 relative z-20">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-0.5 bg-gray-200 border border-gray-200 rounded-xl overflow-hidden shadow-2xl">
             <StatItem value="12" label="Technical Societies" />
             <StatItem value="500+" label="Active Members" />
