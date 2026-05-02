@@ -114,24 +114,24 @@ export default function MemberDashboard() {
         ) : (
           <div className="overflow-x-auto border border-white/5 rounded-xl">
             <table className="w-full text-sm">
-              <thead className="bg-white/[0.03] border-b border-white/5">
-                <tr>
-                  <th className="text-left py-3 px-4 text-gray-400">Event</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Organised By</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Date</th>
-                  <th className="text-right py-3 px-4 text-gray-400">Points</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {points.map(p => (
-                  <tr key={p.id} className="hover:bg-white/[0.02]">
-                    <td className="py-3 px-4 text-white font-medium">{p.event_name || "—"}</td>
-                    <td className="py-3 px-4 text-gray-400">{p.organised_by || "—"}</td>
-                    <td className="py-3 px-4 text-gray-400">{p.date ? new Date(p.date).toLocaleDateString() : "—"}</td>
-                    <td className="py-3 px-4 text-right font-bold text-[#00bfff]">+{p.points}</td>
-                  </tr>
-                ))}
-              </tbody>
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left py-3 px-4 text-[var(--text-muted)]">Event</th>
+                      <th className="text-left py-3 px-4 text-[var(--text-muted)]">Organised By</th>
+                      <th className="text-left py-3 px-4 text-[var(--text-muted)]">Date</th>
+                      <th className="text-right py-3 px-4 text-[var(--text-muted)]">Points</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {points.map(p => (
+                      <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-3 px-4 text-[var(--text-primary)] font-medium">{p.event_name || "—"}</td>
+                        <td className="py-3 px-4 text-[var(--text-secondary)]">{p.organised_by || "—"}</td>
+                        <td className="py-3 px-4 text-[var(--text-secondary)]">{p.date ? new Date(p.date).toLocaleDateString() : "—"}</td>
+                        <td className="py-3 px-4 text-right font-bold text-[#00629B]">+{p.points}</td>
+                      </tr>
+                    ))}
+                  </tbody>
             </table>
           </div>
         )}

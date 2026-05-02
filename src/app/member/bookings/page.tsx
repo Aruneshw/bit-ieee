@@ -105,15 +105,14 @@ export default function BookingsPage() {
   return (
     <div className="space-y-6 animate-slide-up max-w-4xl mx-auto">
       <div>
-        <h1 className="text-4xl font-heading tracking-wide mb-2">Event Bookings</h1>
-        <p className="text-gray-400">Browse and book upcoming events in your society.</p>
+        <h1 className="text-4xl font-heading tracking-wide mb-2 text-[var(--text-primary)]">Event Bookings</h1>
+        <p className="text-[var(--text-secondary)]">Browse and book upcoming events in your society.</p>
       </div>
 
-      {events.length === 0 ? (
         <div className="glass-card p-12 text-center">
-          <Calendar className="w-12 h-12 mx-auto text-gray-600 mb-4" />
-          <h3 className="text-xl font-medium text-gray-400">No Events Available</h3>
-          <p className="text-sm text-gray-500 mt-2">Approved events with booking enabled will appear here.</p>
+          <Calendar className="w-12 h-12 mx-auto text-[var(--text-muted)] mb-4" />
+          <h3 className="text-xl font-medium text-[var(--text-secondary)]">No Events Available</h3>
+          <p className="text-sm text-[var(--text-muted)] mt-2">Approved events with booking enabled will appear here.</p>
         </div>
       ) : (
         <>
@@ -169,22 +168,22 @@ function EventCard({ event, isBooked, isPast, onBook, onCancel }: any) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-bold text-white">{event.name}</h3>
+            <h3 className="text-lg font-bold text-[var(--text-primary)]">{event.name}</h3>
             {isBooked && (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-green-50 text-green-700 border border-green-200 flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" /> Booked
               </span>
             )}
             {isPast && (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-gray-500/20 text-gray-400">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">
                 Completed
               </span>
             )}
           </div>
           {event.description && (
-            <p className="text-sm text-gray-400 mb-3">{event.description}</p>
+            <p className="text-sm text-[var(--text-secondary)] mb-3">{event.description}</p>
           )}
-          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+          <div className="flex flex-wrap gap-4 text-sm text-[var(--text-muted)]">
             {event.date && (
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" /> {new Date(event.date).toLocaleDateString()}
