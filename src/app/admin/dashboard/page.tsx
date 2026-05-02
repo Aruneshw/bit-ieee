@@ -3,8 +3,18 @@
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { Download, Users, Activity, CalendarDays, TrendingUp, Award } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
+
+// Dynamic import for Recharts to optimize bundle size
+const ResponsiveContainer = dynamic(() => import("recharts").then(m => m.ResponsiveContainer), { ssr: false });
+const BarChart = dynamic(() => import("recharts").then(m => m.BarChart), { ssr: false });
+const Bar = dynamic(() => import("recharts").then(m => m.Bar), { ssr: false });
+const XAxis = dynamic(() => import("recharts").then(m => m.XAxis), { ssr: false });
+const YAxis = dynamic(() => import("recharts").then(m => m.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import("recharts").then(m => m.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import("recharts").then(m => m.Tooltip), { ssr: false });
+const Cell = dynamic(() => import("recharts").then(m => m.Cell), { ssr: false });
 
 interface Stats {
   totalUsers: number;
@@ -43,19 +53,18 @@ export default function AdminDashboard() {
           pendingRequests: pendingRes.count || 0,
         });
 
-        // Fetch society points for chart
-        const { data: societies } = await supabase.from("societies").select("id, name, abbreviation");
-        if (societies) {
-          const pointsData: SocietyPoints[] = [];
-          for (const s of societies) {
-            const { data: users } = await supabase
-              .from("users")
-              .select("activity_points")
-              .eq("society_id", s.id);
-            const totalPoints = users?.reduce((sum, u) => sum + (u.activity_points || 0), 0) || 0;
-            pointsData.push({ name: s.name, abbreviation: s.abbreviation || s.name.substring(0, 4), points: totalPoints });
-          }
-          setChartData(pointsData);
+        // Fetch society points for chart using the optimized view
+        const { data: societyStats } = await supabase
+          .from("view_society_stats")
+          .select("name, abbreviation, total_points")
+          .order("total_points", { ascending: false });
+
+        if (societyStats) {
+          setChartData(societyStats.map(s => ({
+            name: s.name,
+            abbreviation: s.abbreviation || s.name.substring(0, 4),
+            points: s.total_points
+          })));
         }
       } catch (err) {
         console.error(err);

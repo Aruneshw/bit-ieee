@@ -3,7 +3,18 @@
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { Table, Search, Download, BarChart3 } from "lucide-react";
-import { BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Table, Search, Download, BarChart3 } from "lucide-react";
+import dynamic from "next/dynamic";
+
+// Dynamic imports for Recharts
+const ResponsiveContainer = dynamic(() => import("recharts").then(m => m.ResponsiveContainer), { ssr: false });
+const BarChart = dynamic(() => import("recharts").then(m => m.BarChart), { ssr: false });
+const Bar = dynamic(() => import("recharts").then(m => m.Bar), { ssr: false });
+const XAxis = dynamic(() => import("recharts").then(m => m.XAxis), { ssr: false });
+const YAxis = dynamic(() => import("recharts").then(m => m.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import("recharts").then(m => m.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import("recharts").then(m => m.Tooltip), { ssr: false });
+const Cell = dynamic(() => import("recharts").then(m => m.Cell), { ssr: false });
 
 export default function SpreadsheetsPage() {
   const [activeTab, setActiveTab] = useState("activity");
@@ -113,20 +124,19 @@ function PerformanceSheet() {
 
   useEffect(() => {
     async function fetch() {
+      // Fetch from optimized view to eliminate N+1 queries
       const { data } = await supabase
-        .from("users")
-        .select("id, name, email, activity_points, primary_skills, society:societies(abbreviation)")
-        .in("role", ["leadership", "event_manager"])
-        .order("activity_points", { ascending: false })
+        .from("view_leader_performance")
+        .select("*")
+        .order("total_score", { ascending: false })
         .limit(20);
 
-      // Enrich with event counts
       if (data) {
-        const enriched = await Promise.all(data.map(async (u) => {
-          const { count } = await supabase.from("events").select("*", { count: "exact", head: true }).eq("organiser_id", u.id).eq("status", "approved");
-          return { ...u, events_conducted: count || 0, score: (u.activity_points || 0) + (count || 0) * 5 };
-        }));
-        setLeaders(enriched);
+        setLeaders(data.map(l => ({
+          ...l,
+          society: { abbreviation: l.society_abbreviation },
+          score: l.total_score
+        })));
       }
       setLoading(false);
     }

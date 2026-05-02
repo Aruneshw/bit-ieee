@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { updateEventStatus } from "@/app/actions/admin-actions";
 
 type EventRow = any;
 type TeamRow = { member_id: string; role: string; label?: string };
@@ -169,11 +170,10 @@ export default function AdminReviewEventPage() {
     setSaving(true);
     try {
       await saveChanges();
-      const { error } = await supabase
-        .from("events")
-        .update({ status: "approved", venue: venue.trim() || null })
-        .eq("id", event.id);
-      if (error) throw error;
+      
+      const res = await updateEventStatus(event.id, "approved", "");
+      if (!res.success) throw new Error(res.error);
+      
       toast.success("Event approved");
       router.replace("/admin/event-requests");
     } catch (e: any) {
@@ -187,11 +187,9 @@ export default function AdminReviewEventPage() {
     if (!event) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("events")
-        .update({ status: "rejected", admin_notes: rejectReason.trim() || null })
-        .eq("id", event.id);
-      if (error) throw error;
+      const res = await updateEventStatus(event.id, "rejected", rejectReason.trim());
+      if (!res.success) throw new Error(res.error);
+      
       toast.success("Event rejected");
       router.replace("/admin/event-requests");
     } catch (e: any) {

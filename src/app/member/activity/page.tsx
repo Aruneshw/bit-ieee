@@ -138,15 +138,33 @@ export default function MemberActivityPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "events" },
-        () => {
-          // Re-fetch for correctness (status/capacity updates)
-          fetchAll();
+        (payload) => {
+          if (payload.eventType === "UPDATE") {
+            // Update local state for status or capacity changes to keep UI snappy
+            setEvents(prev => prev.map(e => e.id === payload.new.id ? { ...e, ...payload.new } : e));
+            // Also update myRequests if it's one of mine
+            setMyRequests(prev => prev.map(r => r.id === payload.new.id ? { ...r, ...payload.new } : r));
+          } else {
+            fetchAll();
+          }
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "event_bookings", filter: `user_id=eq.${profile.id}` },
-        () => fetchAll()
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setBookedEventIds(prev => new Set(prev).add(payload.new.event_id));
+          } else if (payload.eventType === "DELETE") {
+            setBookedEventIds(prev => {
+              const next = new Set(prev);
+              next.delete(payload.old.event_id);
+              return next;
+            });
+          } else {
+            fetchAll();
+          }
+        }
       )
       .subscribe();
 

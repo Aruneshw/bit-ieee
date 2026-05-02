@@ -217,6 +217,40 @@ CREATE INDEX IF NOT EXISTS idx_notifications_society ON notifications(society_id
 CREATE INDEX IF NOT EXISTS idx_posts_society ON posts(society_id);
 
 -- ============================================
+-- PERFORMANCE VIEWS
+-- ============================================
+
+-- Society Stats View (Eliminates N+1 in Dashboard)
+CREATE OR REPLACE VIEW view_society_stats AS
+SELECT 
+  s.id,
+  s.name,
+  s.abbreviation,
+  COALESCE(SUM(u.activity_points), 0) as total_points,
+  COUNT(u.id) as total_members
+FROM societies s
+LEFT JOIN users u ON s.id = u.society_id
+GROUP BY s.id, s.name, s.abbreviation;
+
+-- Leader Performance View (Eliminates N+1 in Spreadsheets)
+CREATE OR REPLACE VIEW view_leader_performance AS
+SELECT 
+  u.id,
+  u.name,
+  u.email,
+  u.role,
+  u.activity_points,
+  u.primary_skills,
+  s.abbreviation as society_abbreviation,
+  COUNT(e.id) as events_conducted,
+  (COALESCE(u.activity_points, 0) + (COUNT(e.id) * 5)) as total_score
+FROM users u
+LEFT JOIN societies s ON u.society_id = s.id
+LEFT JOIN events e ON u.id = e.organiser_id AND e.status = 'approved'
+WHERE u.role IN ('leadership', 'event_manager')
+GROUP BY u.id, u.name, u.email, u.role, u.activity_points, u.primary_skills, s.abbreviation;
+
+-- ============================================
 -- PRE-SEED IEEE SOCIETIES
 -- ============================================
 INSERT INTO societies (name, abbreviation, department) VALUES
@@ -304,9 +338,11 @@ CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (id = auth.
 CREATE POLICY "Admins can view all users" ON users FOR SELECT USING (
   public.get_my_role() = 'admin_primary'
 );
-CREATE POLICY "Same society users are visible" ON users FOR SELECT USING (
+CREATE POLICY "Society members are visible (Safe Fields Only)" ON users FOR SELECT USING (
   society_id = public.get_my_society_id()
 );
+-- Note: We rely on frontend to only select (id, name, email, role, society_id, activity_points, avatar_url) 
+-- for non-admin society views.
 CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (id = auth.uid());
 CREATE POLICY "Admins can manage all users" ON users FOR ALL USING (
   public.get_my_role() = 'admin_primary'
