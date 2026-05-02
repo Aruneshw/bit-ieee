@@ -41,17 +41,17 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-white text-[15px]">{displayName}</span>
+              <span className="font-bold text-gray-900 text-[15px]">{displayName}</span>
               {(isSociety || isAdmin) && (
-                <CheckCircle2 className="w-4 h-4 text-blue-400 fill-blue-400/10" />
+                <CheckCircle2 className="w-4 h-4 text-blue-600 fill-blue-600/10" />
               )}
             </div>
-            <p className="text-[11px] text-gray-500 font-medium">
+            <p className="text-[11px] text-gray-600 font-medium">
               {subtitle} • {formatDistanceToNow(new Date(post.created_at))} ago
             </p>
           </div>
         </div>
-        <button className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors">
+        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
           <MoreHorizontal className="w-5 h-5" />
         </button>
       </div>
@@ -59,8 +59,8 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
       {/* Collaboration Tag */}
       {post.collaborators.length > 0 && (
         <div className="px-5 pb-3">
-          <p className="text-[11px] text-blue-400 font-semibold flex items-center gap-1.5 bg-blue-400/5 py-1 px-2.5 rounded-lg w-fit">
-            <span className="text-gray-400">🤝 In collaboration with</span>
+          <p className="text-[11px] text-blue-700 font-semibold flex items-center gap-1.5 bg-blue-50 py-1 px-2.5 rounded-lg w-fit">
+            <span className="text-gray-500">🤝 In collaboration with</span>
             {post.collaborators.join(", ")}
           </p>
         </div>
@@ -69,24 +69,24 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
       {/* Post Content */}
       <div className="px-5 pb-5 space-y-3">
         {post.title && (
-          <h3 className="text-lg font-bold text-white tracking-tight leading-tight">
+          <h3 className="text-lg font-bold text-black tracking-tight leading-tight">
             {post.title}
           </h3>
         )}
         <div className="relative">
-          <p className="text-[14px] text-gray-300 leading-relaxed whitespace-pre-wrap">
+          <p className="text-[14px] text-gray-800 leading-relaxed whitespace-pre-wrap">
             {post.description}
           </p>
         </div>
         
-        <div className="inline-block px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-bold text-gray-400 tracking-wider uppercase">
+        <div className="inline-block px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-[10px] font-bold text-gray-600 tracking-wider uppercase">
           {post.category}
         </div>
       </div>
 
       {/* Post Media */}
       {post.media && post.media.length > 0 && (
-        <div className="border-y border-white/5 bg-black/20 overflow-hidden">
+        <div className="border-y border-gray-100 bg-gray-50 overflow-hidden">
           <img 
             src={post.media[0]} 
             alt="Post media" 
@@ -96,11 +96,11 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
       )}
 
       {/* Post Actions Stats */}
-      <div className="px-5 py-3 flex items-center justify-between text-xs text-gray-500 font-medium border-b border-white/5">
+      <div className="px-5 py-3 flex items-center justify-between text-xs text-gray-600 font-medium border-b border-gray-100">
         <div className="flex items-center gap-1">
           <div className="flex -space-x-1">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="w-4 h-4 rounded-full bg-blue-500 border border-[#0a192f]" />
+              <div key={i} className="w-4 h-4 rounded-full bg-blue-500 border border-white" />
             ))}
           </div>
           <span className="ml-1">{post.likes.length} Likes</span>
@@ -118,7 +118,7 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
         <button 
           onClick={() => onLike(post.id)}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${
-            isLiked ? "text-red-500 bg-red-500/10" : "text-gray-600 hover:bg-white/10"
+            isLiked ? "text-red-600 bg-red-50" : "text-gray-700 hover:bg-gray-50"
           }`}
         >
           <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
@@ -126,12 +126,12 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
         </button>
         <button 
           onClick={() => setShowComments(!showComments)}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-white/10 transition-all"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all"
         >
           <MessageCircle className="w-5 h-5" />
           Comment
         </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-white/10 transition-all">
+        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all">
           <Share2 className="w-5 h-5" />
           Share
         </button>
@@ -139,23 +139,52 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
 
       {/* Comment Section */}
       {showComments && (
-        <div className="px-5 pb-5 pt-2 border-t border-white/5 space-y-4 bg-white/[0.02]">
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-white/5 shrink-0 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase">
-              U
+        <div className="px-5 pb-5 pt-4 border-t border-gray-100 space-y-4 bg-gray-50/50">
+          {/* Existing Comments */}
+          <div className="space-y-4">
+            {(post as any).interactions?.filter((i: any) => i.type === "comment").map((comment: any) => (
+              <div key={comment.id} className="flex gap-3 animate-in fade-in slide-in-from-top-1">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white uppercase shrink-0">
+                  {comment.user?.name?.[0] || "U"}
+                </div>
+                <div className="flex-1 bg-white p-3 rounded-2xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-gray-900">{comment.user?.name || "Unknown Member"}</span>
+                    <span className="text-[10px] text-gray-400 font-medium">just now</span>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed font-medium">{comment.comment_text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* New Comment Input */}
+          <div className="flex gap-3 pt-2">
+            <div className="w-8 h-8 rounded-full bg-gray-200 shrink-0 flex items-center justify-center text-[10px] font-bold text-gray-500 uppercase">
+              {displayName[0]}
             </div>
             <div className="flex-1 flex gap-2">
               <input 
                 type="text"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (onComment(post.id, commentText), setCommentText(""))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && commentText.trim()) {
+                    onComment(post.id, commentText);
+                    setCommentText("");
+                  }
+                }}
                 placeholder="Write a comment..." 
                 className="input-field"
               />
               <button 
-                onClick={() => { onComment(post.id, commentText); setCommentText(""); }}
-                className="px-4 py-2 bg-[#00629B] hover:bg-blue-600 rounded-xl text-xs font-bold text-white transition-all shadow-lg shadow-blue-500/20"
+                onClick={() => {
+                  if (commentText.trim()) {
+                    onComment(post.id, commentText);
+                    setCommentText("");
+                  }
+                }}
+                className="px-6 py-2 bg-[#00629B] hover:bg-blue-700 rounded-xl text-xs font-bold text-white transition-all shadow-lg shadow-blue-600/10"
               >
                 Post
               </button>

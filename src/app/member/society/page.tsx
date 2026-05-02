@@ -166,38 +166,59 @@ export default function MemberSocietyPage() {
   }, [posts]);
 
   const handleLike = async (postId: string) => {
-    if (!profile) return;
+    if (!profile) {
+      toast.error("Please log in to like posts");
+      return;
+    }
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
     const isLiked = post.likes.includes(profile.id);
 
-    if (isLiked) {
-      await supabase.from("post_interactions").delete().match({ post_id: postId, user_id: profile.id, type: "like" });
-    } else {
-      await supabase.from("post_interactions").insert({ post_id: postId, user_id: profile.id, type: "like" });
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from("post_interactions")
+          .delete()
+          .match({ post_id: postId, user_id: profile.id, type: "like" });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("post_interactions")
+          .insert({ post_id: postId, user_id: profile.id, type: "like" });
+        if (error) throw error;
+      }
+      await fetchPosts();
+    } catch (err: any) {
+      console.error("Like error:", err);
+      toast.error("Failed to update like");
     }
-    
-    fetchPosts();
   };
 
   const handleComment = async (postId: string, text: string) => {
-    if (!profile || !text.trim()) return;
-
-    const { error } = await supabase.from("post_interactions").insert({
-      post_id: postId,
-      user_id: profile.id,
-      type: "comment",
-      comment_text: text
-    });
-
-    if (error) {
-      toast.error("Failed to share comment");
+    if (!profile) {
+      toast.error("Please log in to comment");
       return;
     }
+    if (!text.trim()) return;
 
-    toast.success("Comment shared!");
-    fetchPosts();
+    try {
+      const { error } = await supabase.from("post_interactions").insert({
+        post_id: postId,
+        user_id: profile.id,
+        type: "comment",
+        comment_text: text
+      });
+
+      if (error) throw error;
+
+      toast.success("Comment shared!");
+      await fetchPosts();
+      await fetchStats();
+    } catch (err: any) {
+      console.error("Comment error:", err);
+      toast.error("Failed to share comment");
+    }
   };
 
   const handleAdminAction = async (postId: string, action: "approve" | "reject" | "delete") => {

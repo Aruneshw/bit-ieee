@@ -23,6 +23,7 @@ export interface Post {
   comment_count: number;
   created_at: string;
   updated_at: string;
+  interactions?: any[];
   // Joins
   author?: {
     name: string;
