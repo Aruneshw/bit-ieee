@@ -87,11 +87,8 @@
   }
 
   body {
-    background: radial-gradient(1200px 700px at 10% 10%, color-mix(in srgb, var(--accent-primary) 12%, transparent), transparent 55%),
-      radial-gradient(900px 600px at 90% 15%, color-mix(in srgb, var(--accent-gold) 10%, transparent), transparent 55%),
-      linear-gradient(180deg, var(--bg-primary), var(--bg-secondary));
-    background-attachment: fixed;
-    color: var(--text-primary);
+    background: #ffffff;
+    color: #1a202c;
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -100,34 +97,33 @@
   
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
+    color: #001a2c;
   }
 }
 
 @layer components {
   .glass-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: var(--radius-card);
-    box-shadow: 0 2px 8px var(--shadow);
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
   }
 
   .glass-card-hover {
-    background: var(--bg-card);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: var(--radius-card);
-    box-shadow: 0 2px 8px var(--shadow);
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
   }
 
   .glass-card-hover:hover {
-    background: color-mix(in srgb, var(--bg-card) 88%, var(--accent-primary));
-    border-color: color-mix(in srgb, var(--border) 65%, var(--accent-primary));
+    background: #f8fafc;
+    border-color: #00629B;
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px var(--shadow);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   }
 
   .btn-primary {
@@ -171,16 +167,16 @@
     width: 100%;
     padding: 0.75rem 1rem;
     border-radius: var(--radius-input);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #1a202c;
     outline: none;
-    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.2s ease;
   }
 
   .input-field:focus {
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+    border-color: #00629B;
+    box-shadow: 0 0 0 3px rgba(0, 98, 155, 0.1);
   }
 
   .input-field::placeholder {

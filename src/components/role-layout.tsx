@@ -1,7 +1,7 @@
 "use client";
 
 import { RoleGuard } from "@/components/role-guard";
-import Sidebar from "@/components/sidebar";
+import TopNavbar from "@/components/top-navbar";
 import type { UserRole } from "@/lib/types";
 import { useRole } from "@/hooks/use-role";
 import { Loader2 } from "lucide-react";
@@ -17,18 +17,20 @@ export function RoleLayoutShell({
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--accent-primary)" }} />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Loader2 className="w-8 h-8 animate-spin text-[#00629B]" />
       </div>
     );
   }
 
   return (
     <RoleGuard role={allowedRoles}>
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar user={user} />
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="animate-fade-in">{children}</div>
+      <div className="min-h-screen flex flex-col bg-gray-50/50">
+        <TopNavbar user={user} />
+        <main className="flex-1 p-4 md:p-8">
+          <div className="max-w-[1600px] mx-auto animate-fade-in">
+            {children}
+          </div>
         </main>
       </div>
     </RoleGuard>
