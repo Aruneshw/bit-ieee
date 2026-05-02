@@ -206,7 +206,7 @@ export default function MemberSocietyPage() {
               userId={profile?.id}
               onLike={() => handleLike(post.id)}
               commentValue={commentText[post.id] || ""}
-              onCommentChange={(val) => setCommentText(prev => ({ ...prev, [post.id]: val }))}
+              onCommentChange={(val: string) => setCommentText(prev => ({ ...prev, [post.id]: val }))}
               onCommentSubmit={() => handleComment(post.id)}
             />
           ))
