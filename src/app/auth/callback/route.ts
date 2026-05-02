@@ -77,15 +77,40 @@ export async function GET(request: NextRequest) {
       return redirectToLogin(origin, 'unauthorized_domain')
     }
 
-    const { data: profile, error: profileError } = await getProfileByEmail(supabase, email)
+    let { data: profile, error: profileError } = await getProfileByEmail(supabase, email)
 
     if (profileError) {
       console.error('Profile fetch error in callback:', profileError.message)
     }
 
     if (!profile) {
-      await supabase.auth.signOut()
-      return redirectToLogin(origin, 'not_registered')
+      // Profile missing (likely deleted manually). Self-heal if domain is valid.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      const adminClient = supabaseUrl && serviceRoleKey 
+        ? createAdminClient(supabaseUrl, serviceRoleKey)
+        : supabase;
+
+      const userRole = ALL_ADMIN_EMAILS.includes(email) ? 'admin_primary' : 'membership'
+      
+      const { data: newProfile, error: createError } = await adminClient
+        .from('users')
+        .insert({
+          id: user.id,
+          email: email,
+          name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+          role: userRole,
+          profile_completed: userRole === 'admin_primary'
+        })
+        .select('role, society_id, profile_completed')
+        .maybeSingle()
+
+      if (createError || !newProfile) {
+        console.error('Failed to self-heal profile:', createError?.message)
+        await supabase.auth.signOut()
+        return redirectToLogin(origin, 'not_registered')
+      }
+      profile = newProfile
     }
 
     const role = profile.role as UserRole
