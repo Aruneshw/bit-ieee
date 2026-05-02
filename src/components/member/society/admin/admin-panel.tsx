@@ -8,10 +8,13 @@ import { Post } from "../types";
 interface AdminPanelProps {
   posts: Post[];
   onAction: (postId: string, action: "approve" | "reject" | "delete") => void;
+  onEdit: (postId: string, newTitle: string, newDesc: string) => void;
 }
 
-export function AdminPanel({ posts, onAction }: AdminPanelProps) {
-  const [filter, setFilter] = useState<"all" | "pending" | "flagged" | "reported">("pending");
+export function AdminPanel({ posts, onAction, onEdit }: AdminPanelProps) {
+  const [filter, setFilter] = useState<"all" | "pending" | "flagged" | "reported">("all");
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editData, setEditData] = useState({ title: "", description: "" });
 
   const filteredPosts = posts.filter(p => {
     if (filter === "all") return true;
@@ -20,6 +23,18 @@ export function AdminPanel({ posts, onAction }: AdminPanelProps) {
     if (filter === "reported") return false; // Mock for now
     return true;
   });
+
+  const handleEditClick = (post: Post) => {
+    setEditingPost(post);
+    setEditData({ title: post.title || "", description: post.description });
+  };
+
+  const handleSaveEdit = () => {
+    if (editingPost) {
+      onEdit(editingPost.id, editData.title, editData.description);
+      setEditingPost(null);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -84,6 +99,12 @@ export function AdminPanel({ posts, onAction }: AdminPanelProps) {
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
                 <button 
+                  onClick={() => handleEditClick(post)}
+                  className="px-4 py-2 bg-white/5 hover:bg-blue-500/10 text-gray-500 hover:text-blue-400 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
+                >
+                  <Filter className="w-4 h-4" /> Edit
+                </button>
+                <button 
                   onClick={() => onAction(post.id, "reject")}
                   className="px-4 py-2 bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-400 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
                 >
@@ -106,6 +127,43 @@ export function AdminPanel({ posts, onAction }: AdminPanelProps) {
           ))
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editingPost && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditingPost(null)} />
+          <div className="relative glass-card w-full max-w-lg border border-white/10 shadow-2xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-blue-400" /> Edit Post Before Approval
+            </h3>
+            <div className="space-y-4">
+              <input 
+                type="text"
+                className="input-field"
+                placeholder="Post Title (Optional)"
+                value={editData.title}
+                onChange={(e) => setEditData(p => ({ ...p, title: e.target.value }))}
+              />
+              <textarea 
+                rows={5}
+                className="input-field resize-none"
+                placeholder="Description"
+                value={editData.description}
+                onChange={(e) => setEditData(p => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button onClick={() => setEditingPost(null)} className="btn-secondary px-6">Cancel</button>
+              <button 
+                onClick={handleSaveEdit} 
+                className="btn-primary px-8"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

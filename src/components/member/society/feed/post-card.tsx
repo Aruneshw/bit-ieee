@@ -6,6 +6,7 @@ import {
   ShieldCheck, Edit
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 interface PostCardProps {
   post: Post;
@@ -40,6 +41,25 @@ export function PostCard({ post, currentUserId, currentUserRole, onLike, onComme
   const subtitle = isSociety
     ? `${post.society?.name || "IEEE Society"}`
     : `${post.author?.role?.replace("_", " ") || "Member"}`;
+
+  const handleShare = async () => {
+    const shareData = {
+      title: post.title || 'IEEE Hub Post',
+      text: post.description,
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch (err) {
+      console.error("Share error:", err);
+    }
+  };
 
   return (
     <div className="glass-card p-0 border border-white/5 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
@@ -204,7 +224,10 @@ export function PostCard({ post, currentUserId, currentUserRole, onLike, onComme
           <MessageCircle className="w-5 h-5" />
           Comment
         </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all">
+        <button 
+          onClick={handleShare}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all"
+        >
           <Share2 className="w-5 h-5" />
           Share
         </button>

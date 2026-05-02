@@ -314,7 +314,7 @@ export default function MemberSocietyPage() {
       )}
 
       {view === "admin" ? (
-        <AdminPanel posts={posts} onAction={handleAdminAction} />
+        <AdminPanel posts={posts} onAction={handleAdminAction} onEdit={handleEdit} />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12">
           

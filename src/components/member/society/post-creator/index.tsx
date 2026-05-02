@@ -121,7 +121,7 @@ export function PostCreator({ userProfile, onPostCreated }: PostCreatorProps) {
         society_id: formData.identityType === "society" ? formData.societyId : null,
         content: content,
         media_url: mediaUrl,
-        status: "approved" // Silent moderation passed
+        status: "approved"
       });
 
       if (postError) throw postError;
@@ -196,25 +196,39 @@ export function PostCreator({ userProfile, onPostCreated }: PostCreatorProps) {
               {step === 2 && (
                 <div className="space-y-6">
                   <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Posting As</p>
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                     <div 
                       onClick={() => setFormData(p => ({ ...p, identityType: "individual", societyId: null }))}
-                      className={`p-4 rounded-2xl border cursor-pointer ${formData.identityType === "individual" ? "bg-[#00629B]/20 border-[#00629B]" : "bg-white/5 border-white/5"}`}
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all ${formData.identityType === "individual" ? "bg-[#00629B]/20 border-[#00629B]" : "bg-white/5 border-white/5 hover:bg-white/10"}`}
                     >
-                      <p className="font-bold text-white">{userProfile?.name}</p>
-                      <p className="text-xs text-gray-500">Individual Member</p>
+                      <p className="font-bold text-white">General / All Societies</p>
+                      <p className="text-xs text-gray-500">Visible to everyone</p>
                     </div>
-                    {userProfile?.society_id && (
-                      <div 
-                        onClick={() => setFormData(p => ({ ...p, identityType: "society", societyId: userProfile.society_id }))}
-                        className={`p-4 rounded-2xl border cursor-pointer ${formData.identityType === "society" ? "bg-[#00629B]/20 border-[#00629B]" : "bg-white/5 border-white/5"}`}
-                      >
-                        <p className="font-bold text-white">Society Branch</p>
-                        <p className="text-xs text-gray-500">Post as an Officer</p>
-                      </div>
+
+                    {userProfile?.role?.includes("admin") ? (
+                      SOCIETIES.map(soc => (
+                        <div 
+                          key={soc.id}
+                          onClick={() => setFormData(p => ({ ...p, identityType: "society", societyId: soc.id }))}
+                          className={`p-4 rounded-2xl border cursor-pointer transition-all ${formData.identityType === "society" && formData.societyId === soc.id ? "bg-[#00629B]/20 border-[#00629B]" : "bg-white/5 border-white/5 hover:bg-white/10"}`}
+                        >
+                          <p className="font-bold text-white">{soc.name}</p>
+                          <p className="text-xs text-gray-500">Post as Admin for {soc.abbreviation}</p>
+                        </div>
+                      ))
+                    ) : (
+                      userProfile?.society_id && (
+                        <div 
+                          onClick={() => setFormData(p => ({ ...p, identityType: "society", societyId: userProfile.society_id }))}
+                          className={`p-4 rounded-2xl border cursor-pointer transition-all ${formData.identityType === "society" ? "bg-[#00629B]/20 border-[#00629B]" : "bg-white/5 border-white/5 hover:bg-white/10"}`}
+                        >
+                          <p className="font-bold text-white">Society Branch</p>
+                          <p className="text-xs text-gray-500">Post as an Officer</p>
+                        </div>
+                      )
                     )}
                   </div>
-                  <div className="flex justify-between mt-8">
+                  <div className="flex justify-between mt-8 pt-4 border-t border-white/5">
                     <button onClick={() => setStep(1)} className="btn-secondary px-6">Back</button>
                     <button onClick={() => setStep(3)} className="btn-primary px-8">Next</button>
                   </div>
