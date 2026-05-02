@@ -32,8 +32,6 @@ export default function Home() {
           </div>
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-          <Link href="#features" className="hover:text-white transition-colors">Features</Link>
-          <Link href="#societies" className="hover:text-white transition-colors">Societies</Link>
           <Link href="/login" className="px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md transition-all text-white hover:-translate-y-0.5">
             Sign In
           </Link>
@@ -66,12 +64,6 @@ export default function Home() {
           >
             Get Started
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link
-            href="#features"
-            className="flex items-center gap-2 px-8 py-4 rounded-full border border-white/10 text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-          >
-            Explore Features
           </Link>
         </div>
 

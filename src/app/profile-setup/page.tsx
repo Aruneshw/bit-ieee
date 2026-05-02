@@ -21,13 +21,8 @@ import type { UserRole } from "@/lib/types";
 
 const step1Schema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters"),
-  dob: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["Male", "Female", "Prefer not to say"], { error: "Please select a gender" }),
   mobile: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
-  personal_email: z.string().email("Enter a valid email").refine(
-    (e) => !e.endsWith("@bitsathy.ac.in"),
-    "Use a personal email, not your college email"
-  ),
 });
 
 const step2Schema = z.object({
@@ -49,7 +44,6 @@ const step3Schema = z.object({
     .or(z.literal("")),
   portfolio: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   primary_skills: z.array(z.string()).min(1, "Select at least one primary skill"),
-  secondary_skills: z.array(z.string()).optional(),
   bio: z.string().max(300, "Bio must be 300 characters or less").optional(),
 });
 
@@ -134,10 +128,8 @@ export default function ProfileSetupPage() {
         .update({
           full_name: step1Data.full_name,
           name: step1Data.full_name,
-          dob: step1Data.dob,
           gender: step1Data.gender,
           mobile: step1Data.mobile,
-          personal_email: step1Data.personal_email,
           department: step2Data.department,
           year: step2Data.year,
           roll_number: step2Data.roll_number,
@@ -145,7 +137,6 @@ export default function ProfileSetupPage() {
           linkedin: data3.linkedin || null,
           portfolio: data3.portfolio || null,
           primary_skills: (data3.primary_skills || []).join(", "),
-          secondary_skills: (data3.secondary_skills || []).join(", "),
           bio: data3.bio || null,
           profile_completed: true,
           updated_at: new Date().toISOString(),
@@ -168,10 +159,8 @@ export default function ProfileSetupPage() {
         user_id: dbUser.id,
         personal_info: {
           name: step1Data.full_name,
-          dob: step1Data.dob,
           gender: step1Data.gender,
           mobile: step1Data.mobile,
-          personal_email: step1Data.personal_email,
           college_email: collegeEmail,
           department: step2Data.department,
           year: step2Data.year,
@@ -184,7 +173,6 @@ export default function ProfileSetupPage() {
         },
         skills: {
           primary: data3.primary_skills || [],
-          secondary: data3.secondary_skills || [],
         },
         bio: data3.bio || null,
         society: societyName,
@@ -344,10 +332,6 @@ function Step1Form({ initialData, onNext }: { initialData: Step1Data | null; onN
       </FormField>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Date of Birth" icon={<Calendar />} error={errors.dob?.message}>
-          <input type="date" max={new Date().toISOString().split("T")[0]} {...register("dob")} className="input-field pl-10" />
-        </FormField>
-
         <FormField label="Gender" error={errors.gender?.message}>
           <select {...register("gender")} className="input-field">
             <option value="">Select gender</option>
@@ -356,15 +340,9 @@ function Step1Form({ initialData, onNext }: { initialData: Step1Data | null; onN
             <option value="Prefer not to say">Prefer not to say</option>
           </select>
         </FormField>
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <FormField label="Mobile Number" icon={<Phone />} error={errors.mobile?.message}>
           <input type="tel" maxLength={10} {...register("mobile")} className="input-field pl-10" placeholder="9876543210" />
-        </FormField>
-
-        <FormField label="Personal Email ID" icon={<Mail />} error={errors.personal_email?.message}>
-          <input type="email" {...register("personal_email")} className="input-field pl-10" placeholder="you@gmail.com" />
         </FormField>
       </div>
 
@@ -500,23 +478,7 @@ function Step3Form({
         name="primary_skills"
         control={control}
         render={({ field }) => (
-          <FormField label="Primary Skills" error={errors.primary_skills?.message}>
-            <TagInput
-              value={field.value || []}
-              onChange={field.onChange}
-              placeholder="Select or type skills..."
-              options={[...SKILL_OPTIONS]}
-            />
-          </FormField>
-        )}
-      />
-
-      {/* Secondary Skills */}
-      <Controller
-        name="secondary_skills"
-        control={control}
-        render={({ field }) => (
-          <FormField label="Secondary Skills" optional>
+          <FormField label="Skills" error={errors.primary_skills?.message}>
             <TagInput
               value={field.value || []}
               onChange={field.onChange}
