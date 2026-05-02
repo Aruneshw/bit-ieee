@@ -43,7 +43,6 @@ export default function MemberSocietyPage() {
         setProfile(userData);
       }
 
-      // Fetch all societies for filters and stats
       const { data: societiesData } = await supabase.from("societies").select("*");
       setSocieties(societiesData || []);
 
@@ -52,6 +51,22 @@ export default function MemberSocietyPage() {
       setLoading(false);
     }
     init();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('society-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+        fetchPosts();
+        fetchStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_interactions' }, () => {
+        fetchPosts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   async function fetchPosts() {
