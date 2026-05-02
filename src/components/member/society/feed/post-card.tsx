@@ -118,7 +118,7 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
         <button 
           onClick={() => onLike(post.id)}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${
-            isLiked ? "text-red-400 bg-red-400/5" : "text-gray-400 hover:bg-white/5"
+            isLiked ? "text-red-500 bg-red-500/10" : "text-gray-600 hover:bg-white/10"
           }`}
         >
           <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
@@ -126,12 +126,12 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
         </button>
         <button 
           onClick={() => setShowComments(!showComments)}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-400 hover:bg-white/5 transition-all"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-white/10 transition-all"
         >
           <MessageCircle className="w-5 h-5" />
           Comment
         </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-400 hover:bg-white/5 transition-all">
+        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-white/10 transition-all">
           <Share2 className="w-5 h-5" />
           Share
         </button>
@@ -151,7 +151,7 @@ export function PostCard({ post, currentUserId, onLike, onComment }: PostCardPro
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (onComment(post.id, commentText), setCommentText(""))}
                 placeholder="Write a comment..." 
-                className="flex-1 bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 transition-all"
+                className="input-field"
               />
               <button 
                 onClick={() => { onComment(post.id, commentText); setCommentText(""); }}

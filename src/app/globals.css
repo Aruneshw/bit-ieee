@@ -169,7 +169,8 @@
     border-radius: var(--radius-input);
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    color: #1a202c;
+    color: #000000;
+    font-weight: 700;
     outline: none;
     transition: all 0.2s ease;
   }
