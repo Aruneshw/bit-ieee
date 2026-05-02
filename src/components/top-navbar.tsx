@@ -10,7 +10,7 @@ import {
   CalendarDays, FileText, Megaphone, LogOut, Table,
   Zap, Info, MessageSquare, BookOpen, ChevronDown,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 interface NavItem {
@@ -81,8 +81,26 @@ export default function TopNavbar({ user }: { user: UserProfile }) {
   const router = useRouter();
   const supabase = createClient();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showMoreDropdown, setShowMoreDropdown] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   const navItems = getNavItems(user.role);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
+        setShowMoreDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     async function fetchUnread() {
@@ -160,19 +178,28 @@ export default function TopNavbar({ user }: { user: UserProfile }) {
 
           {/* "More" Dropdown for remaining items */}
           {navItems.length > 7 && (
-            <div className="relative group">
-              <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-white/5 hover:text-white transition-all whitespace-nowrap">
+            <div className="relative" ref={moreRef}>
+              <button 
+                onClick={() => setShowMoreDropdown(!showMoreDropdown)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-white/5 hover:text-white transition-all whitespace-nowrap"
+              >
                 <span>More</span>
-                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+                <ChevronDown className={cn("w-4 h-4 transition-transform", showMoreDropdown && "rotate-180")} />
               </button>
               
-              <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-left scale-95 group-hover:scale-100 z-[60]">
+              <div className={cn(
+                "absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 transition-all transform origin-top-left z-[60]",
+                showMoreDropdown 
+                  ? "opacity-100 visible scale-100" 
+                  : "opacity-0 invisible scale-95"
+              )}>
                 {navItems.slice(7).map((item) => {
                   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      onClick={() => setShowMoreDropdown(false)}
                       className={cn(
                         "flex items-center gap-3 px-4 py-2 text-sm transition-colors",
                         isActive 
@@ -199,22 +226,37 @@ export default function TopNavbar({ user }: { user: UserProfile }) {
               </p>
               <p className="text-[9px] text-blue-200 truncate">{user.email}</p>
             </div>
-            <div className="relative group">
-              <button className="w-9 h-9 rounded-full bg-white text-[#00629B] flex items-center justify-center text-sm font-bold shadow-md border-2 border-white/20 transition-transform group-hover:scale-105">
+            <div className="relative" ref={profileRef}>
+              <button 
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className={cn(
+                  "w-9 h-9 rounded-full bg-white text-[#00629B] flex items-center justify-center text-sm font-bold shadow-md border-2 border-white/20 transition-transform",
+                  showProfileDropdown ? "scale-105 ring-2 ring-white/50" : "hover:scale-105"
+                )}
+              >
                 {(user.name || user.email)?.[0]?.toUpperCase() || "?"}
               </button>
               
-              {/* Dropdown placeholder or direct action */}
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right scale-95 group-hover:scale-100">
+              {/* Dropdown menu */}
+              <div className={cn(
+                "absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 transition-all transform origin-top-right z-50",
+                showProfileDropdown 
+                  ? "opacity-100 visible scale-100" 
+                  : "opacity-0 invisible scale-95"
+              )}>
                 <Link 
                   href={`/${user.role === 'admin_primary' ? 'admin' : user.role === 'student_rep' ? 'rep' : user.role === 'leadership' ? 'leadership' : 'member'}/update`}
+                  onClick={() => setShowProfileDropdown(false)}
                   className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <Activity className="w-4 h-4" /> Edit Profile
                 </Link>
                 <div className="h-px bg-gray-100 my-1" />
                 <button
-                  onClick={handleLogout}
+                  onClick={() => {
+                    setShowProfileDropdown(false);
+                    handleLogout();
+                  }}
                   className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                 >
                   <LogOut className="w-4 h-4" /> Sign Out
