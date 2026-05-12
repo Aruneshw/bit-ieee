@@ -78,13 +78,17 @@ export interface ActivityPoint {
 export interface Task {
   id: string
   event_id: string
-  type: 'mcq' | 'coding'
+  title: string | null
+  description: string | null
+  type: 'mcq' | 'coding' | 'general'
+  status: 'draft' | 'approved' | 'archived'
   otp: string | null
   otp_expires_at: string | null
   questions: Question[]
   created_by: string
   created_at: string
   event?: Event
+  task_questions?: TaskQuestion[]
 }
 
 export interface Question {
@@ -95,6 +99,33 @@ export interface Question {
   points: number
 }
 
+export interface TaskQuestion {
+  id: string
+  task_id: string
+  type: 'mcq' | 'coding' | 'general'
+  text: string
+  options: string[]
+  correct_answer: string | null
+  points: number
+  sort_order: number
+  status: 'draft' | 'approved' | 'rejected'
+  created_at: string
+}
+
+export interface SubmissionAnswer {
+  id: string
+  submission_id: string
+  question_id: string
+  answer_text: string | null
+  selected_option: number | null
+  is_correct: boolean | null
+  admin_remarks: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+  question?: TaskQuestion
+}
+
 export interface TaskSubmission {
   id: string
   task_id: string
@@ -102,9 +133,11 @@ export interface TaskSubmission {
   answers: unknown[]
   score: number
   completed: boolean
+  review_status: 'pending' | 'reviewed' | 'partial'
   submitted_at: string
   user?: UserProfile
   task?: Task
+  submission_answers?: SubmissionAnswer[]
 }
 
 export interface Post {

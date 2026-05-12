@@ -1,251 +1,301 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useState, useEffect } from "react";
-import { Lock, Code, CheckCircle, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ClipboardList, Code, FileText, HelpCircle, CheckCircle, Clock, Send, ArrowLeft, Loader2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
+
+type View = "list" | "detail" | "result";
 
 export default function MemberTaskPage() {
   const supabase = createClient();
-  const [otp, setOtp] = useState("");
-  const [taskActive, setTaskActive] = useState(false);
-  const [taskData, setTaskData] = useState<any>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [completed, setCompleted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [view, setView] = useState<View>("list");
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [questions, setQuestions] = useState<TaskQuestion[]>([]);
+  const [answers, setAnswers] = useState<Record<string, { text: string; option: number | null }>>({});
+  const [existingSub, setExistingSub] = useState<any | null>(null);
+  const [reviewAnswers, setReviewAnswers] = useState<SubmissionAnswer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  async function verifyOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
+  // Load approved tasks for events this member has booked
+  useEffect(() => {
+    (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setError("Not authenticated."); setLoading(false); return; }
+      if (!user) { setLoading(false); return; }
 
-      // Get user's society
-      const { data: profile } = await supabase
-        .from("users")
-        .select("society_id")
-        .eq("id", user.id)
-        .single();
+      // Get events the member booked
+      const { data: bookings } = await supabase.from("event_bookings").select("event_id").eq("user_id", user.id);
+      const bookedEventIds = (bookings || []).map(b => b.event_id);
+      if (bookedEventIds.length === 0) { setLoading(false); return; }
 
-      if (!profile?.society_id) { setError("You are not assigned to a society."); setLoading(false); return; }
+      // Get approved tasks for those events
+      const { data: taskData } = await supabase.from("tasks")
+        .select("*, event:events(name, society_id)")
+        .eq("status", "approved")
+        .in("event_id", bookedEventIds)
+        .order("created_at", { ascending: false });
 
-      const { data: task } = await supabase
-        .from("tasks")
-        .select("*, event:events(name, society_id, booking_enabled)")
-        .eq("otp", otp)
-        .single();
+      // Check which tasks have submissions
+      const { data: subs } = await supabase.from("task_submissions")
+        .select("task_id, completed, review_status")
+        .eq("user_id", user.id);
 
-      if (!task) { setError("Invalid OTP. Please try again."); setLoading(false); return; }
+      const subMap = new Map((subs || []).map(s => [s.task_id, s]));
+      const enriched = (taskData || []).map(t => ({
+        ...t,
+        submission: subMap.get(t.id) || null,
+      }));
 
-      // Check expiry
-      if (task.otp_expires_at && new Date(task.otp_expires_at) < new Date()) {
-        setError("This OTP has expired."); setLoading(false); return;
-      }
+      setTasks(enriched);
+      setLoading(false);
+    })();
+  }, []);
 
-      // Check society isolation
-      if (task.event?.society_id !== profile.society_id) {
-        setError("This task is not available for your society."); setLoading(false); return;
-      }
+  const openTask = useCallback(async (task: any) => {
+    setSelectedTask(task);
+    // Load approved questions
+    const { data: qs } = await supabase.from("task_questions").select("*")
+      .eq("task_id", task.id).eq("status", "approved").order("sort_order");
+    setQuestions((qs || []) as TaskQuestion[]);
 
-      // Check booking requirement
-      const { data: booking } = await supabase
-        .from("event_bookings")
-        .select("id")
-        .eq("event_id", task.event_id)
-        .eq("user_id", user.id)
-        .single();
+    // Check existing submission
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: sub } = await supabase.from("task_submissions")
+        .select("*, submission_answers(*, question:task_questions(*))")
+        .eq("task_id", task.id).eq("user_id", user.id).single();
 
-      if (!booking) {
-        setError("You have not booked this event. Please book it first from Book Events.");
-        setLoading(false);
+      if (sub?.completed) {
+        setExistingSub(sub);
+        setReviewAnswers((sub.submission_answers || []) as SubmissionAnswer[]);
+        setView("result");
         return;
       }
-
-      setTaskData(task);
-      setTaskActive(true);
-    } catch {
-      setError("An error occurred.");
-    } finally {
-      setLoading(false);
     }
-  }
 
-  // Tab lock: prevent navigation/close during active task
-  useEffect(() => {
-    if (!taskActive) return;
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "Your task is in progress. Are you sure you want to leave?";
-      return e.returnValue;
-    };
-
-    // Push state to prevent back navigation
-    window.history.pushState(null, "", window.location.href);
-    const handlePopState = () => {
-      window.history.pushState(null, "", window.location.href);
-      toast.warning("You cannot navigate away until the task is completed.");
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("popstate", handlePopState);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [taskActive]);
+    // Initialize empty answers
+    const init: Record<string, { text: string; option: number | null }> = {};
+    (qs || []).forEach((q: any) => { init[q.id] = { text: "", option: null }; });
+    setAnswers(init);
+    setView("detail");
+  }, []);
 
   async function submitTask() {
-    setLoading(true);
+    if (!selectedTask) return;
+    setSubmitting(true);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !taskData) return;
+      if (!user) throw new Error("Not authenticated");
 
-      // Calculate score
+      // Calculate auto-score for MCQs
       let score = 0;
-      const questions = taskData.questions || [];
       for (const q of questions) {
-        if (answers[q.id] && q.correct_answer !== undefined) {
-          if (answers[q.id] === String(q.correct_answer)) {
-            score += q.points || 10;
-          }
+        const ans = answers[q.id];
+        if (q.type === "mcq" && q.correct_answer !== null && ans?.option !== null) {
+          if (String(ans.option) === q.correct_answer) score += q.points;
         }
       }
 
-      // If no correct answers defined, give full marks for completion
-      if (questions.every((q: any) => q.correct_answer === undefined)) {
-        score = questions.length * 10;
-      }
-
-      const { error } = await supabase.from("task_submissions").insert({
-        task_id: taskData.id,
+      // Create submission
+      const { data: submission, error: subErr } = await supabase.from("task_submissions").insert({
+        task_id: selectedTask.id,
         user_id: user.id,
-        answers: Object.entries(answers).map(([qId, ans]) => ({ question_id: qId, answer: ans })),
+        answers: Object.entries(answers).map(([qId, a]) => ({ question_id: qId, ...a })),
         score,
         completed: true,
-      });
+        review_status: "pending",
+      }).select().single();
 
-      if (error) throw error;
-      setCompleted(true);
-      setTaskActive(false);
-      toast.success(`Task completed! Score: ${score}`);
+      if (subErr) throw subErr;
+
+      // Create individual answer records
+      const answerRows = questions.map(q => ({
+        submission_id: submission.id,
+        question_id: q.id,
+        answer_text: answers[q.id]?.text || null,
+        selected_option: answers[q.id]?.option ?? null,
+      }));
+
+      if (answerRows.length > 0) {
+        const { error: ansErr } = await supabase.from("submission_answers").insert(answerRows);
+        if (ansErr) throw ansErr;
+      }
+
+      toast.success(`Task submitted! Auto-scored MCQs: ${score} pts`);
+      setView("list");
+      // Refresh task list
+      setTasks(prev => prev.map(t => t.id === selectedTask.id ? { ...t, submission: { completed: true, review_status: "pending" } } : t));
     } catch (err: any) {
       toast.error(err.message || "Submission failed");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
-  // Full-screen task lock
-  if (taskActive && taskData) {
-    const questions = taskData.questions || [];
-
+  // ── Result View ──
+  if (view === "result" && selectedTask && existingSub) {
     return (
-      <div className="fixed inset-0 z-50 bg-navy flex flex-col p-6 md:p-8 overflow-y-auto">
-        <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Code className="text-[#00bfff]" />
-            {taskData.type === "coding" ? "Live Coding Challenge" : "MCQ Assessment"}
-            <span className="text-sm text-gray-400 ml-2">— {taskData.event?.name}</span>
-          </h2>
-          <div className="flex items-center gap-2 text-amber-500 bg-amber-500/10 px-4 py-2 rounded-lg font-mono text-sm">
-            <AlertTriangle className="w-4 h-4" /> DO NOT CLOSE THIS TAB
+      <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
+        <button onClick={() => { setView("list"); setExistingSub(null); }} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Tasks
+        </button>
+        <div>
+          <h1 className="text-3xl font-heading tracking-wide">{selectedTask.title}</h1>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400 uppercase">Submitted</span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${existingSub.review_status === "reviewed" ? "bg-blue-500/20 text-blue-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+              {existingSub.review_status === "reviewed" ? "Reviewed" : "Pending Review"}
+            </span>
+            <span className="text-sm text-gray-400">Score: {existingSub.score}</span>
           </div>
         </div>
 
-        <div className="flex-1 space-y-6 max-w-3xl mx-auto w-full">
-          {taskData.type === "coding" ? (
-            <div className="space-y-4">
-              <h3 className="text-xl font-medium">Problem Statement:</h3>
-              {questions.map((q: any, i: number) => (
-                <div key={q.id || i} className="space-y-3">
-                  <p className="text-gray-300 font-mono bg-black/50 p-4 rounded-lg">{q.text}</p>
-                  <textarea
-                    rows={12}
-                    className="w-full bg-[#0a1628] border border-white/10 rounded-lg p-4 font-mono text-green-400 focus:outline-none focus:border-[#00bfff] text-sm"
-                    placeholder="Write your solution here..."
-                    value={answers[q.id || `q${i}`] || ""}
-                    onChange={e => setAnswers(prev => ({ ...prev, [q.id || `q${i}`]: e.target.value }))}
-                  />
+        <div className="space-y-4">
+          {reviewAnswers.map((ans, i) => {
+            const q = ans.question || questions.find(qq => qq.id === ans.question_id);
+            return (
+              <div key={ans.id} className="glass-card p-5 space-y-3">
+                <div className="flex items-start justify-between">
+                  <p className="text-sm font-medium text-white">Q{i + 1}: {q?.text}</p>
+                  {ans.is_correct !== null && (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${ans.is_correct ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                      {ans.is_correct ? "✓ Correct" : "✗ Wrong"}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {questions.map((q: any, qIdx: number) => (
-                <div key={q.id || qIdx} className="glass-card p-5">
-                  <h3 className="text-lg font-medium mb-4">Q{qIdx + 1}: {q.text}</h3>
-                  <div className="space-y-2">
-                    {(q.options || ["Option A", "Option B", "Option C", "Option D"]).map((opt: string, oIdx: number) => (
-                      <label key={oIdx} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                        answers[q.id || `q${qIdx}`] === String(oIdx) ? "bg-[#00629B]/20 border-[#00bfff]/40 text-[#00bfff]" : "border-white/10 hover:bg-white/5"
-                      }`}>
-                        <input
-                          type="radio"
-                          name={`q-${q.id || qIdx}`}
-                          value={String(oIdx)}
-                          checked={answers[q.id || `q${qIdx}`] === String(oIdx)}
-                          onChange={e => setAnswers(prev => ({ ...prev, [q.id || `q${qIdx}`]: e.target.value }))}
-                          className="accent-[#00bfff] w-4 h-4"
-                        />
-                        <span>{opt}</span>
-                      </label>
-                    ))}
+                <div className="p-3 bg-black/30 rounded-lg">
+                  <p className="text-sm text-gray-300 font-mono whitespace-pre-wrap">
+                    {ans.answer_text || (ans.selected_option !== null && q?.options ? `${String.fromCharCode(65 + ans.selected_option)}: ${(q.options as string[])[ans.selected_option]}` : "No answer")}
+                  </p>
+                </div>
+                {ans.admin_remarks && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                    <MessageSquare className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-300">{ans.admin_remarks}</p>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Detail View (Answer Questions) ──
+  if (view === "detail" && selectedTask) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
+        <button onClick={() => setView("list")} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Tasks
+        </button>
+        <div>
+          <h1 className="text-3xl font-heading tracking-wide">{selectedTask.title}</h1>
+          {selectedTask.description && <p className="text-gray-400 mt-1">{selectedTask.description}</p>}
+          <p className="text-xs text-gray-500 mt-2">{questions.length} question{questions.length !== 1 ? "s" : ""} • {selectedTask.event?.name}</p>
         </div>
 
-        <div className="mt-6 flex justify-end max-w-3xl mx-auto w-full">
-          <button onClick={submitTask} disabled={loading} className="btn-primary px-8 py-4 text-lg">
-            {loading ? "Submitting..." : "Submit Assessment"}
+        <div className="space-y-6">
+          {questions.map((q, i) => (
+            <div key={q.id} className="glass-card p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500">Q{i + 1}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${q.type === "mcq" ? "bg-blue-500/20 text-blue-400" : q.type === "coding" ? "bg-purple-500/20 text-purple-400" : "bg-cyan-500/20 text-cyan-400"}`}>{q.type}</span>
+                <span className="text-[10px] text-gray-500">{q.points} pts</span>
+              </div>
+              <p className="text-white font-medium">{q.text}</p>
+
+              {q.type === "mcq" && q.options && Array.isArray(q.options) ? (
+                <div className="space-y-2">
+                  {(q.options as string[]).map((opt: string, oIdx: number) => (
+                    <label key={oIdx} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${answers[q.id]?.option === oIdx ? "bg-[#00629B]/20 border-[#00bfff]/40 text-[#00bfff]" : "border-white/10 hover:bg-white/5 text-gray-300"}`}>
+                      <input type="radio" name={`q-${q.id}`} checked={answers[q.id]?.option === oIdx}
+                        onChange={() => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: oIdx } }))}
+                        className="accent-[#00bfff] w-4 h-4" />
+                      <span className="text-sm">{String.fromCharCode(65 + oIdx)}. {opt}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : q.type === "coding" ? (
+                <textarea rows={10} value={answers[q.id]?.text || ""}
+                  onChange={e => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                  className="w-full bg-[#0a1628] border border-white/10 rounded-lg p-4 font-mono text-green-400 focus:outline-none focus:border-[#00bfff] text-sm"
+                  placeholder="Write your code here..." />
+              ) : (
+                <textarea rows={5} value={answers[q.id]?.text || ""}
+                  onChange={e => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                  className="input-field resize-none text-sm" placeholder="Type your answer here..." />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end pb-8">
+          <button onClick={submitTask} disabled={submitting} className="btn-primary px-8 py-3 text-lg flex items-center gap-2">
+            {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</> : <><Send className="w-5 h-5" /> Submit Assessment</>}
           </button>
         </div>
       </div>
     );
   }
 
-  if (completed) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[70vh] text-center animate-slide-up">
-        <CheckCircle className="w-20 h-20 text-green-500 mb-6" />
-        <h2 className="text-4xl font-heading tracking-wide mb-2">Task Completed!</h2>
-        <p className="text-gray-400 max-w-md">Your responses have been recorded and your activity points will be updated shortly by the event manager.</p>
-      </div>
-    );
-  }
+  // ── List View ──
+  const typeIcons: Record<string, React.ReactNode> = {
+    mcq: <HelpCircle className="w-5 h-5" />,
+    coding: <Code className="w-5 h-5" />,
+    general: <FileText className="w-5 h-5" />,
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[70vh] max-w-md mx-auto text-center space-y-6">
-      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-2 border border-white/10 shadow-lg shadow-[#00bfff]/5">
-        <Lock className="w-8 h-8 text-[#00bfff]" />
-      </div>
+    <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
       <div>
-        <h1 className="text-3xl font-heading tracking-wide mb-2">Secure Task Gateway</h1>
-        <p className="text-gray-400">Enter the 6-digit OTP provided by the event coordinator to unlock your task.</p>
+        <h1 className="text-4xl font-heading tracking-wide mb-2">My Tasks</h1>
+        <p className="text-gray-400">Complete tasks assigned to your booked events.</p>
       </div>
-      <form onSubmit={verifyOtp} className="w-full space-y-4">
-        <input
-          type="text"
-          required
-          maxLength={6}
-          value={otp}
-          onChange={e => setOtp(e.target.value.replace(/\D/g, ""))}
-          placeholder="0 0 0 0 0 0"
-          className="w-full px-4 py-4 rounded-xl bg-black/40 border border-white/20 text-center text-3xl font-mono tracking-[1em] focus:border-[#00bfff] outline-none transition-colors shadow-inner placeholder:text-gray-600"
-        />
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        <button type="submit" disabled={loading || otp.length < 6} className="w-full py-4 btn-primary text-lg">
-          {loading ? "Verifying..." : "Unlock Task"}
-        </button>
-      </form>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-48"><Loader2 className="w-8 h-8 animate-spin text-[#00bfff]" /></div>
+      ) : tasks.length === 0 ? (
+        <div className="glass-card p-12 text-center border border-dashed border-white/10">
+          <ClipboardList className="w-12 h-12 mx-auto text-gray-600 mb-4" />
+          <p className="text-gray-400 font-medium">No tasks available.</p>
+          <p className="text-gray-500 text-sm mt-1">Book events to see tasks assigned by admins.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tasks.map(task => {
+            const sub = task.submission;
+            const statusLabel = sub?.completed ? (sub.review_status === "reviewed" ? "Reviewed" : "Submitted") : "Not Started";
+            const statusColor = sub?.completed ? (sub.review_status === "reviewed" ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400") : "bg-gray-500/20 text-gray-400";
+
+            return (
+              <button key={task.id} onClick={() => openTask(task)}
+                className="w-full text-left glass-card p-5 hover:border-[#00bfff]/20 transition-all border border-white/5 group">
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${task.type === "mcq" ? "bg-blue-500/10 text-blue-400" : task.type === "coding" ? "bg-purple-500/10 text-purple-400" : "bg-cyan-500/10 text-cyan-400"}`}>
+                    {typeIcons[task.type]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-medium text-white group-hover:text-[#00bfff] transition-colors">{task.title || "Untitled Task"}</h3>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${task.type === "mcq" ? "bg-blue-500/20 text-blue-400" : task.type === "coding" ? "bg-purple-500/20 text-purple-400" : "bg-cyan-500/20 text-cyan-400"}`}>{task.type}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${statusColor}`}>{statusLabel}</span>
+                    </div>
+                    {task.description && <p className="text-sm text-gray-500 mt-1 truncate">{task.description}</p>}
+                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
+                      <Clock className="w-3 h-3" /> {task.event?.name} • {new Date(task.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
