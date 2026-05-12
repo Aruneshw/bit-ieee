@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Send, Eye, RefreshCw, Loader2, ChevronRight } from "lucide-react";
+import { Plus, Send, Eye, RefreshCw, Loader2, ChevronRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { TaskQuestion } from "@/lib/types";
 import { QuestionForm, QuestionCard, SubmissionReviewCard } from "./components";
@@ -53,6 +53,12 @@ export default function AdminTaskPanel() {
   async function createTask(e: React.FormEvent) {
     e.preventDefault();
     if (!newEventId || !newTitle.trim()) return;
+    // Prevent duplicate tasks per event
+    const existing = tasks.find(t => t.event_id === newEventId);
+    if (existing) {
+      toast.error(`A task already exists for this event ("${existing.title}"). Add questions inside the existing task instead.`);
+      return;
+    }
     setCreating(true);
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("tasks").insert({
@@ -61,7 +67,7 @@ export default function AdminTaskPanel() {
       status: "draft", questions: [], created_by: user?.id,
     });
     if (error) toast.error(error.message);
-    else { toast.success("Task created!"); setNewTitle(""); setNewDesc(""); await loadAllTasks(); }
+    else { toast.success("Task created! Now add questions below."); setNewTitle(""); setNewDesc(""); setNewEventId(""); await loadAllTasks(); }
     setCreating(false);
   }
 
@@ -96,6 +102,19 @@ export default function AdminTaskPanel() {
     const { error } = await supabase.from("tasks").update({ status: "approved" }).eq("id", taskId);
     if (error) toast.error(error.message);
     else { toast.success("Task published! Members can see it now."); await loadAllTasks(); }
+  }
+
+  async function deleteTask(taskId: string) {
+    if (!confirm("Delete this task and all its questions? This cannot be undone.")) return;
+    // Delete questions first, then task
+    await supabase.from("task_questions").delete().eq("task_id", taskId);
+    await supabase.from("submission_answers").delete().in("submission_id",
+      (await supabase.from("task_submissions").select("id").eq("task_id", taskId)).data?.map(s => s.id) || []
+    );
+    await supabase.from("task_submissions").delete().eq("task_id", taskId);
+    const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+    if (error) toast.error(error.message);
+    else { toast.success("Task deleted!"); await loadAllTasks(); }
   }
 
   async function loadSubmissions(taskId: string) {
@@ -180,6 +199,9 @@ export default function AdminTaskPanel() {
                         <Send className="w-3 h-3" /> Publish
                       </button>
                     )}
+                    <button onClick={() => deleteTask(task.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Task">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
 
