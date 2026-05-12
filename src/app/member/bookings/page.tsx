@@ -11,21 +11,13 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
 
-  const fetchEvents = useCallback(async (sid: string | null, uid: string) => {
-    // Fetch events for this society OR global events (no society)
-    let query = supabase
+  const fetchEvents = useCallback(async (uid: string) => {
+    // Show ALL approved events to all members
+    const { data: eventsData } = await supabase
       .from("events")
       .select("*, society:societies(name, abbreviation), organiser:users(name)")
       .eq("status", "approved")
       .order("date", { ascending: true });
-
-    if (sid) {
-      query = query.or(`society_id.eq.${sid},society_id.is.null`);
-    } else {
-      query = query.is("society_id", null);
-    }
-
-    const { data: eventsData } = await query;
 
     const { data: bookings } = await supabase
       .from("event_bookings")
@@ -47,16 +39,9 @@ export default function BookingsPage() {
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) return;
+      if (!user) return;
       setUserId(user.id);
-
-      const { data: profile } = await supabase
-        .from("users")
-        .select("society_id")
-        .eq("email", user.email.toLowerCase())
-        .single();
-
-      fetchEvents(profile?.society_id || null, user.id);
+      fetchEvents(user.id);
     }
     init();
   }, [fetchEvents]);
