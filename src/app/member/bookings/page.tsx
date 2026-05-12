@@ -12,10 +12,11 @@ export default function BookingsPage() {
   const [userId, setUserId] = useState("");
 
   const fetchEvents = useCallback(async (sid: string, uid: string) => {
+    // Fetch events for this society OR global events (no society)
     const { data: eventsData } = await supabase
       .from("events")
       .select("*, society:societies(name, abbreviation), organiser:users(name)")
-      .eq("society_id", sid)
+      .or(`society_id.eq.${sid},society_id.is.null`)
       .eq("status", "approved")
       .eq("booking_enabled", true)
       .order("date", { ascending: true });
