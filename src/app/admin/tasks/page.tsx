@@ -122,7 +122,7 @@ export default function AdminTaskPanel() {
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-4xl font-heading tracking-wide mb-2">Task Panel</h1>
-          <p className="text-gray-400">Create tasks for events, add questions, approve & review.</p>
+          <p style={{ color: "var(--text-secondary)" }}>Create tasks for events, add questions, approve & review.</p>
         </div>
         <button onClick={loadAllTasks} className="btn-secondary text-sm flex items-center gap-2">
           <RefreshCw className="w-4 h-4" /> Refresh
@@ -131,7 +131,7 @@ export default function AdminTaskPanel() {
 
       {/* Create New Task */}
       <form onSubmit={createTask} className="glass-card p-5 space-y-3 border-2" style={{ borderColor: "var(--accent-primary)" }}>
-        <h3 className="text-sm font-bold flex items-center gap-2"><Plus className="w-4 h-4 text-[#00bfff]" /> Create New Task</h3>
+        <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}><Plus className="w-4 h-4" style={{ color: "var(--accent-primary)" }} /> Create New Task</h3>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <select value={newEventId} onChange={e => setNewEventId(e.target.value)} required className="input-field text-sm">
             <option value="">Select Event *</option>
@@ -149,7 +149,7 @@ export default function AdminTaskPanel() {
       {/* All Tasks — Open, Not Collapsed */}
       {tasks.length === 0 ? (
         <div className="glass-card p-12 text-center">
-          <p className="text-gray-400">No tasks yet. Create one above.</p>
+          <p style={{ color: "var(--text-muted)" }}>No tasks yet. Create one above.</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -159,20 +159,20 @@ export default function AdminTaskPanel() {
             const subs = submissions[task.id] || [];
 
             return (
-              <div key={task.id} className="glass-card p-6 space-y-4 border border-white/10">
+              <div key={task.id} className="glass-card p-6 space-y-4" style={{ borderColor: "var(--border)" }}>
                 {/* Task Header — always visible */}
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-lg font-bold text-white">{task.title || "Untitled"}</h3>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${task.type === "mcq" ? "bg-blue-500/20 text-blue-400" : task.type === "coding" ? "bg-purple-500/20 text-purple-400" : "bg-cyan-500/20 text-cyan-400"}`}>{task.type}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${task.status === "approved" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"}`}>{task.status}</span>
+                      <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{task.title || "Untitled"}</h3>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${task.type === "mcq" ? "bg-blue-100 text-blue-700" : task.type === "coding" ? "bg-purple-100 text-purple-700" : "bg-cyan-100 text-cyan-700"}`}>{task.type}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${task.status === "approved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{task.status}</span>
                     </div>
-                    <p className="text-sm text-gray-400 mt-1 flex items-center gap-1">
-                      <ChevronRight className="w-3 h-3" /> Event: <strong className="text-white">{task.event?.name || "—"}</strong>
-                      {task.event?.society?.abbreviation && <span className="text-gray-500 ml-1">({task.event.society.abbreviation})</span>}
+                    <p className="text-sm mt-1 flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
+                      <ChevronRight className="w-3 h-3" /> Event: <strong style={{ color: "var(--text-primary)" }}>{task.event?.name || "—"}</strong>
+                      {task.event?.society?.abbreviation && <span className="ml-1" style={{ color: "var(--text-muted)" }}>({task.event.society.abbreviation})</span>}
                     </p>
-                    {task.description && <p className="text-xs text-gray-500 mt-1">{task.description}</p>}
+                    {task.description && <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{task.description}</p>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {task.status === "draft" && (
@@ -184,13 +184,15 @@ export default function AdminTaskPanel() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
+                <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
                   <button onClick={() => setActiveTab(p => ({ ...p, [task.id]: "questions" }))}
-                    className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab === "questions" ? "bg-[#00629B] text-white" : "text-gray-500"}`}>
+                    className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab === "questions" ? "bg-[#00629B] text-white" : ""}`}
+                    style={tab !== "questions" ? { color: "var(--text-muted)" } : {}}>
                     Questions ({qs.length})
                   </button>
                   <button onClick={() => { setActiveTab(p => ({ ...p, [task.id]: "submissions" })); loadSubmissions(task.id); }}
-                    className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab === "submissions" ? "bg-[#00629B] text-white" : "text-gray-500"}`}>
+                    className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab === "submissions" ? "bg-[#00629B] text-white" : ""}`}
+                    style={tab !== "submissions" ? { color: "var(--text-muted)" } : {}}>
                     <Eye className="w-3 h-3 inline mr-1" /> Submissions
                   </button>
                 </div>
@@ -200,7 +202,7 @@ export default function AdminTaskPanel() {
                   <div className="space-y-4">
                     <QuestionForm onAdd={(q) => addQuestion(task.id, q)} />
                     {qs.length === 0 ? (
-                      <p className="text-gray-500 text-sm text-center py-4">No questions yet.</p>
+                      <p className="text-sm text-center py-4" style={{ color: "var(--text-muted)" }}>No questions yet. Click "Add Question" above.</p>
                     ) : (
                       <div className="space-y-3">
                         {qs.map((q, i) => (
@@ -215,7 +217,7 @@ export default function AdminTaskPanel() {
                 ) : (
                   <div className="space-y-3">
                     {subs.length === 0 ? (
-                      <p className="text-gray-500 text-sm text-center py-4">No submissions yet.</p>
+                      <p className="text-sm text-center py-4" style={{ color: "var(--text-muted)" }}>No submissions yet.</p>
                     ) : subs.map(sub => (
                       <SubmissionReviewCard key={sub.id} submission={sub} questions={qs} onUpdateAnswer={updateAnswer} />
                     ))}

@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { Plus, Trash2, CheckCircle, XCircle, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
 
-/* ── Question Form ── */
+/* ── Question Form (hidden by default, toggled) ── */
 export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: string; options: string[]; correct_answer: string | null; points: number }) => void }) {
+  const [open, setOpen] = useState(false);
   const [type, setType] = useState<"mcq" | "coding" | "general">("mcq");
   const [text, setText] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
@@ -23,17 +24,32 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
       points,
     });
     setText(""); setOptions(["", "", "", ""]); setCorrect(null); setPoints(10);
+    setOpen(false);
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)}
+        className="w-full p-3 border-2 border-dashed rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+        style={{ borderColor: "var(--border)", color: "var(--accent-primary)" }}>
+        <Plus className="w-4 h-4" /> Add Question
+      </button>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="glass-card p-5 space-y-4 border border-white/5">
-      <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-        <Plus className="w-4 h-4 text-[#00bfff]" /> Add Question
-      </h4>
+    <form onSubmit={handleSubmit} className="glass-card p-5 space-y-4 border" style={{ borderColor: "var(--accent-primary)" }}>
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+          <Plus className="w-4 h-4" style={{ color: "var(--accent-primary)" }} /> Add Question
+        </h4>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs" style={{ color: "var(--text-muted)" }}>Cancel</button>
+      </div>
       <div className="flex gap-2">
         {(["mcq", "coding", "general"] as const).map(t => (
           <button key={t} type="button" onClick={() => setType(t)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${type === t ? "bg-[#00629B] text-white" : "bg-white/5 text-gray-400 hover:bg-white/10"}`}>
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${type === t ? "bg-[#00629B] text-white" : ""}`}
+            style={type !== t ? { background: "var(--bg-secondary)", color: "var(--text-secondary)" } : {}}>
             {t}
           </button>
         ))}
@@ -42,10 +58,10 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
         className="input-field resize-none text-sm" placeholder={type === "coding" ? "Problem statement..." : "Question text..."} />
       {type === "mcq" && (
         <div className="space-y-2">
-          <p className="text-xs text-gray-500">Options (click radio to mark correct):</p>
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>Options (click radio to mark correct):</p>
           {options.map((opt, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input type="radio" name="correct" checked={correct === i} onChange={() => setCorrect(i)} className="accent-[#00bfff]" />
+              <input type="radio" name="correct" checked={correct === i} onChange={() => setCorrect(i)} className="accent-[#00629B]" />
               <input type="text" value={opt} onChange={e => { const o = [...options]; o[i] = e.target.value; setOptions(o); }}
                 className="input-field text-sm flex-1" placeholder={`Option ${i + 1}`} />
             </div>
@@ -53,7 +69,7 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
         </div>
       )}
       <div className="flex items-center gap-4">
-        <label className="text-xs text-gray-400">Points:</label>
+        <label className="text-xs" style={{ color: "var(--text-muted)" }}>Points:</label>
         <input type="number" value={points} onChange={e => setPoints(Number(e.target.value))} min={1} max={100} className="input-field w-24 text-sm" />
         <button type="submit" className="btn-primary text-sm ml-auto">Add Question</button>
       </div>
@@ -66,47 +82,48 @@ export function QuestionCard({ q, index, onApprove, onReject, onDelete }: {
   q: TaskQuestion; index: number;
   onApprove: () => void; onReject: () => void; onDelete: () => void;
 }) {
-  const statusColors: Record<string, string> = {
-    draft: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    approved: "bg-green-500/20 text-green-400 border-green-500/30",
-    rejected: "bg-red-500/20 text-red-400 border-red-500/30",
+  const statusStyles: Record<string, string> = {
+    draft: "bg-yellow-100 text-yellow-700 border-yellow-300",
+    approved: "bg-green-100 text-green-700 border-green-300",
+    rejected: "bg-red-100 text-red-700 border-red-300",
   };
-  const typeColors: Record<string, string> = {
-    mcq: "bg-blue-500/20 text-blue-400",
-    coding: "bg-purple-500/20 text-purple-400",
-    general: "bg-cyan-500/20 text-cyan-400",
+  const typeStyles: Record<string, string> = {
+    mcq: "bg-blue-100 text-blue-700",
+    coding: "bg-purple-100 text-purple-700",
+    general: "bg-cyan-100 text-cyan-700",
   };
 
   return (
-    <div className="p-4 bg-white/[0.02] rounded-xl border border-white/5 space-y-3">
+    <div className="p-4 rounded-xl border space-y-3" style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-gray-500">Q{index + 1}</span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${typeColors[q.type]}`}>{q.type}</span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${statusColors[q.status]}`}>{q.status}</span>
-          <span className="text-[10px] text-gray-500">{q.points} pts</span>
+          <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>Q{index + 1}</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${typeStyles[q.type]}`}>{q.type}</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${statusStyles[q.status]}`}>{q.status}</span>
+          <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{q.points} pts</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {q.status !== "approved" && (
-            <button onClick={onApprove} className="p-1.5 rounded-lg hover:bg-green-500/10 text-gray-500 hover:text-green-400 transition-colors" title="Approve">
+            <button onClick={onApprove} className="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition-colors" title="Approve">
               <CheckCircle className="w-4 h-4" />
             </button>
           )}
           {q.status !== "rejected" && (
-            <button onClick={onReject} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors" title="Reject">
+            <button onClick={onReject} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Reject">
               <XCircle className="w-4 h-4" />
             </button>
           )}
-          <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors" title="Delete">
+          <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
-      <p className="text-sm text-gray-300 whitespace-pre-wrap">{q.text}</p>
+      <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>{q.text}</p>
       {q.type === "mcq" && q.options && Array.isArray(q.options) && (
         <div className="grid grid-cols-2 gap-1.5">
           {(q.options as string[]).map((opt: string, i: number) => (
-            <div key={i} className={`text-xs px-3 py-1.5 rounded-lg border ${q.correct_answer === String(i) ? "border-green-500/30 bg-green-500/10 text-green-400" : "border-white/5 text-gray-500"}`}>
+            <div key={i} className={`text-xs px-3 py-1.5 rounded-lg border ${q.correct_answer === String(i) ? "border-green-400 bg-green-50 text-green-700" : "text-gray-500"}`}
+              style={q.correct_answer !== String(i) ? { borderColor: "var(--border)" } : {}}>
               {String.fromCharCode(65 + i)}. {opt}
             </div>
           ))}
@@ -126,35 +143,33 @@ export function SubmissionReviewCard({ submission, questions, onUpdateAnswer }: 
   const answers: SubmissionAnswer[] = submission.submission_answers || [];
 
   return (
-    <div className="p-4 bg-white/[0.02] rounded-xl border border-white/5">
+    <div className="p-4 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}>
       <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-bold text-gray-400">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "var(--bg-secondary)", color: "var(--text-secondary)" }}>
             {(submission.user?.name || "?")[0].toUpperCase()}
           </div>
           <div className="text-left">
-            <p className="text-sm font-medium text-white">{submission.user?.name || "Unknown"}</p>
-            <p className="text-xs text-gray-500">{new Date(submission.submitted_at).toLocaleString()}</p>
+            <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{submission.user?.name || "Unknown"}</p>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>{new Date(submission.submitted_at).toLocaleString()}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-            submission.review_status === "reviewed" ? "bg-green-500/20 text-green-400" :
-            submission.review_status === "partial" ? "bg-yellow-500/20 text-yellow-400" :
-            "bg-gray-500/20 text-gray-400"
+            submission.review_status === "reviewed" ? "bg-green-100 text-green-700" :
+            submission.review_status === "partial" ? "bg-yellow-100 text-yellow-700" :
+            "bg-gray-100 text-gray-600"
           }`}>{submission.review_status}</span>
-          {expanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+          {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "var(--text-muted)" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "var(--text-muted)" }} />}
         </div>
       </button>
       {expanded && (
-        <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
+        <div className="mt-4 space-y-3 border-t pt-4" style={{ borderColor: "var(--border)" }}>
           {answers.map(ans => {
             const q = questions.find(qq => qq.id === ans.question_id);
-            return (
-              <AnswerReviewRow key={ans.id} answer={ans} question={q} onUpdate={onUpdateAnswer} />
-            );
+            return <AnswerReviewRow key={ans.id} answer={ans} question={q} onUpdate={onUpdateAnswer} />;
           })}
-          {answers.length === 0 && <p className="text-xs text-gray-500">No answers recorded.</p>}
+          {answers.length === 0 && <p className="text-xs" style={{ color: "var(--text-muted)" }}>No answers recorded.</p>}
         </div>
       )}
     </div>
@@ -175,26 +190,26 @@ function AnswerReviewRow({ answer, question, onUpdate }: {
   }
 
   return (
-    <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5 space-y-2">
-      <p className="text-xs text-gray-400 font-medium">{question?.text || "Question"} <span className="text-gray-600">({question?.type})</span></p>
-      <div className="p-2 bg-black/30 rounded-lg">
-        <p className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
+    <div className="p-3 rounded-lg space-y-2" style={{ background: "var(--bg-secondary)" }}>
+      <p className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>{question?.text || "Question"} <span style={{ color: "var(--text-muted)" }}>({question?.type})</span></p>
+      <div className="p-2 rounded-lg" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+        <p className="text-sm whitespace-pre-wrap font-mono" style={{ color: "var(--text-primary)" }}>
           {answer.answer_text || (answer.selected_option !== null && question?.options ? `Option ${String.fromCharCode(65 + answer.selected_option)}: ${(question.options as string[])[answer.selected_option]}` : "No answer")}
         </p>
       </div>
       <div className="flex items-center gap-2">
         <input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Admin remarks..."
           className="input-field text-xs flex-1 py-1.5" />
-        <button onClick={() => save(true)} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors flex items-center gap-1">
+        <button onClick={() => save(true)} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-green-100 text-green-700 hover:bg-green-200 transition-colors flex items-center gap-1">
           <CheckCircle className="w-3 h-3" /> Correct
         </button>
-        <button onClick={() => save(false)} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center gap-1">
+        <button onClick={() => save(false)} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center gap-1">
           <XCircle className="w-3 h-3" /> Wrong
         </button>
-        {saved && <span className="text-[10px] text-green-400">Saved!</span>}
+        {saved && <span className="text-[10px] text-green-600">Saved!</span>}
       </div>
       {answer.is_correct !== null && (
-        <p className={`text-[10px] ${answer.is_correct ? "text-green-400" : "text-red-400"}`}>
+        <p className={`text-[10px] ${answer.is_correct ? "text-green-600" : "text-red-600"}`}>
           Previously marked: {answer.is_correct ? "✓ Correct" : "✗ Wrong"}{answer.admin_remarks ? ` — "${answer.admin_remarks}"` : ""}
         </p>
       )}
