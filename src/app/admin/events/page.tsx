@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { AlertCircle, CalendarX2, Filter, RefreshCw, Search } from "lucide-react";
+import { AlertCircle, CalendarX2, Filter, RefreshCw, Search, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
 
 type Row = any;
 
@@ -15,6 +16,8 @@ export default function AdminAllEventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [societies, setSocieties] = useState<any[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>("all");
   const [societyId, setSocietyId] = useState<string>("all");
@@ -52,6 +55,40 @@ export default function AdminAllEventsPage() {
     }
   }
 
+  async function createEvent(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setCreating(true);
+    const fd = new FormData(e.currentTarget);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase.from("events").insert({
+        name: fd.get("name"),
+        description: fd.get("description") || null,
+        society_id: fd.get("society_id") || null,
+        organiser_id: user.id,
+        skill_type: fd.get("skillType") || null,
+        selected_skill: fd.get("selectedSkill") || null,
+        event_type: fd.get("eventType") || null,
+        date: fd.get("date") ? new Date(fd.get("date") as string).toISOString() : null,
+        venue: fd.get("venue") || null,
+        status: "approved",
+        booking_enabled: true,
+      });
+
+      if (error) throw error;
+      toast.success("Event created & auto-approved!");
+      (e.target as HTMLFormElement).reset();
+      setShowCreate(false);
+      fetchRows();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create event");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   useEffect(() => {
     fetchSocieties();
     fetchRows();
@@ -74,10 +111,68 @@ export default function AdminAllEventsPage() {
             View and manage events across all statuses.
           </p>
         </div>
-        <button type="button" onClick={fetchRows} className="btn-secondary text-sm flex items-center gap-2 w-fit">
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setShowCreate(!showCreate)} className="btn-primary text-sm flex items-center gap-2 w-fit">
+            <Plus className="w-4 h-4" /> Create Event
+            {showCreate ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+          <button type="button" onClick={fetchRows} className="btn-secondary text-sm flex items-center gap-2 w-fit">
+            <RefreshCw className="w-4 h-4" /> Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Create Event Form */}
+      {showCreate && (
+        <form onSubmit={createEvent} className="glass-card p-6 space-y-4 border-2" style={{ borderColor: "var(--accent-primary)" }}>
+          <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+            <Plus className="w-5 h-5" style={{ color: "var(--accent-primary)" }} /> Create New Event (Auto-Approved)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--text-muted)" }}>Event Name *</label>
+              <input name="name" required className="input-field" placeholder="e.g. Intro to IoT Workshop" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--text-muted)" }}>Society</label>
+              <select name="society_id" className="input-field">
+                <option value="">None (Global)</option>
+                {societies.map(s => <option key={s.id} value={s.id}>{s.abbreviation || s.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--text-muted)" }}>Event Date</label>
+              <input name="date" type="date" className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--text-muted)" }}>Venue</label>
+              <input name="venue" className="input-field" placeholder="e.g. Seminar Hall A" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--text-muted)" }}>Event Type</label>
+              <select name="eventType" className="input-field">
+                <option value="">Select</option>
+                <option value="hardware">Hardware</option>
+                <option value="software">Software</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--text-muted)" }}>Skill</label>
+              <input name="selectedSkill" className="input-field" placeholder="e.g. Machine Learning" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--text-muted)" }}>Description</label>
+            <textarea name="description" rows={2} className="input-field resize-none" placeholder="Brief description..." />
+          </div>
+          <div className="flex gap-3">
+            <button type="submit" disabled={creating} className="btn-primary text-sm">
+              {creating ? "Creating..." : "Create & Approve Event"}
+            </button>
+            <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary text-sm">Cancel</button>
+          </div>
+        </form>
+      )}
 
       {/* Filters */}
       <div className="glass-card p-5">
