@@ -1,97 +1,123 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useState, useEffect, useCallback } from "react";
-import { ClipboardList, Code, FileText, HelpCircle, CheckCircle, Clock, Send, ArrowLeft, Loader2, MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ClipboardList, Code, FileText, HelpCircle, CheckCircle, Clock, Send, ArrowLeft, Loader2, MessageSquare, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
 
-type View = "list" | "detail" | "result";
+type View = "events" | "questions" | "result";
 
 export default function MemberTaskPage() {
   const supabase = createClient();
-  const [view, setView] = useState<View>("list");
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [view, setView] = useState<View>("events");
+  const [bookedEvents, setBookedEvents] = useState<any[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [questions, setQuestions] = useState<TaskQuestion[]>([]);
+  const [taskId, setTaskId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, { text: string; option: number | null }>>({});
   const [existingSub, setExistingSub] = useState<any | null>(null);
   const [reviewAnswers, setReviewAnswers] = useState<SubmissionAnswer[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [userId, setUserId] = useState("");
 
-  // Load approved tasks for events this member has booked
+  // Load booked events
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
+      setUserId(user.id);
 
-      // Get events the member booked
+      // Get booked event IDs
       const { data: bookings } = await supabase.from("event_bookings").select("event_id").eq("user_id", user.id);
-      const bookedEventIds = (bookings || []).map(b => b.event_id);
-      if (bookedEventIds.length === 0) { setLoading(false); return; }
+      const bookedIds = (bookings || []).map(b => b.event_id);
+      if (bookedIds.length === 0) { setLoading(false); return; }
 
-      // Get approved tasks for those events
-      const { data: taskData } = await supabase.from("tasks")
-        .select("*, event:events(name, society_id)")
+      // Get event details
+      const { data: evts } = await supabase.from("events")
+        .select("id, name, description, date, venue, event_type, society:societies(abbreviation)")
+        .in("id", bookedIds)
         .eq("status", "approved")
-        .in("event_id", bookedEventIds)
         .order("created_at", { ascending: false });
 
-      // Check which tasks have submissions
+      // Check which events have approved tasks
+      const { data: tasks } = await supabase.from("tasks")
+        .select("id, event_id, title, type, status")
+        .eq("status", "approved")
+        .in("event_id", bookedIds);
+
+      // Check submissions
       const { data: subs } = await supabase.from("task_submissions")
         .select("task_id, completed, review_status")
         .eq("user_id", user.id);
 
+      const taskMap = new Map<string, any[]>();
+      (tasks || []).forEach(t => {
+        const list = taskMap.get(t.event_id) || [];
+        list.push(t);
+        taskMap.set(t.event_id, list);
+      });
+
       const subMap = new Map((subs || []).map(s => [s.task_id, s]));
-      const enriched = (taskData || []).map(t => ({
-        ...t,
-        submission: subMap.get(t.id) || null,
+
+      const enriched = (evts || []).map(ev => ({
+        ...ev,
+        tasks: (taskMap.get(ev.id) || []).map(t => ({ ...t, submission: subMap.get(t.id) || null })),
+        hasTask: taskMap.has(ev.id),
       }));
 
-      setTasks(enriched);
+      setBookedEvents(enriched);
       setLoading(false);
     })();
   }, []);
 
-  const openTask = useCallback(async (task: any) => {
-    setSelectedTask(task);
+  // Open event → load approved questions from all approved tasks for this event
+  async function openEvent(event: any) {
+    setSelectedEvent(event);
+    const eventTasks = event.tasks || [];
+
+    if (eventTasks.length === 0) {
+      toast.info("No tasks available for this event yet.");
+      return;
+    }
+
+    // Use first approved task
+    const task = eventTasks[0];
+    setTaskId(task.id);
+
+    // Check existing submission
+    const { data: sub } = await supabase.from("task_submissions")
+      .select("*, submission_answers(*, question:task_questions(*))")
+      .eq("task_id", task.id).eq("user_id", userId).single();
+
+    if (sub?.completed) {
+      setExistingSub(sub);
+      setReviewAnswers((sub.submission_answers || []) as SubmissionAnswer[]);
+      // Load questions for result view
+      const { data: qs } = await supabase.from("task_questions").select("*")
+        .eq("task_id", task.id).eq("status", "approved").order("sort_order");
+      setQuestions((qs || []) as TaskQuestion[]);
+      setView("result");
+      return;
+    }
+
     // Load approved questions
     const { data: qs } = await supabase.from("task_questions").select("*")
       .eq("task_id", task.id).eq("status", "approved").order("sort_order");
     setQuestions((qs || []) as TaskQuestion[]);
 
-    // Check existing submission
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: sub } = await supabase.from("task_submissions")
-        .select("*, submission_answers(*, question:task_questions(*))")
-        .eq("task_id", task.id).eq("user_id", user.id).single();
-
-      if (sub?.completed) {
-        setExistingSub(sub);
-        setReviewAnswers((sub.submission_answers || []) as SubmissionAnswer[]);
-        setView("result");
-        return;
-      }
-    }
-
-    // Initialize empty answers
+    // Init answers
     const init: Record<string, { text: string; option: number | null }> = {};
     (qs || []).forEach((q: any) => { init[q.id] = { text: "", option: null }; });
     setAnswers(init);
-    setView("detail");
-  }, []);
+    setView("questions");
+  }
 
   async function submitTask() {
-    if (!selectedTask) return;
+    if (!taskId) return;
     setSubmitting(true);
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Calculate auto-score for MCQs
       let score = 0;
       for (const q of questions) {
         const ans = answers[q.id];
@@ -100,35 +126,29 @@ export default function MemberTaskPage() {
         }
       }
 
-      // Create submission
       const { data: submission, error: subErr } = await supabase.from("task_submissions").insert({
-        task_id: selectedTask.id,
-        user_id: user.id,
+        task_id: taskId, user_id: userId,
         answers: Object.entries(answers).map(([qId, a]) => ({ question_id: qId, ...a })),
-        score,
-        completed: true,
-        review_status: "pending",
+        score, completed: true, review_status: "pending",
       }).select().single();
-
       if (subErr) throw subErr;
 
-      // Create individual answer records
       const answerRows = questions.map(q => ({
-        submission_id: submission.id,
-        question_id: q.id,
+        submission_id: submission.id, question_id: q.id,
         answer_text: answers[q.id]?.text || null,
         selected_option: answers[q.id]?.option ?? null,
       }));
-
       if (answerRows.length > 0) {
         const { error: ansErr } = await supabase.from("submission_answers").insert(answerRows);
         if (ansErr) throw ansErr;
       }
 
-      toast.success(`Task submitted! Auto-scored MCQs: ${score} pts`);
-      setView("list");
-      // Refresh task list
-      setTasks(prev => prev.map(t => t.id === selectedTask.id ? { ...t, submission: { completed: true, review_status: "pending" } } : t));
+      toast.success(`Submitted! Auto-scored MCQs: ${score} pts`);
+      setView("events");
+      // Update local state
+      setBookedEvents(prev => prev.map(ev => ev.id === selectedEvent?.id ? {
+        ...ev, tasks: ev.tasks.map((t: any) => t.id === taskId ? { ...t, submission: { completed: true, review_status: "pending" } } : t)
+      } : ev));
     } catch (err: any) {
       toast.error(err.message || "Submission failed");
     } finally {
@@ -136,24 +156,30 @@ export default function MemberTaskPage() {
     }
   }
 
+  function goBack() {
+    setView("events");
+    setSelectedEvent(null);
+    setExistingSub(null);
+    setQuestions([]);
+  }
+
   // ── Result View ──
-  if (view === "result" && selectedTask && existingSub) {
+  if (view === "result" && selectedEvent) {
     return (
       <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
-        <button onClick={() => { setView("list"); setExistingSub(null); }} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Tasks
+        <button onClick={goBack} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Events
         </button>
         <div>
-          <h1 className="text-3xl font-heading tracking-wide">{selectedTask.title}</h1>
+          <h1 className="text-3xl font-heading tracking-wide">{selectedEvent.name}</h1>
           <div className="flex items-center gap-3 mt-2">
             <span className="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400 uppercase">Submitted</span>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${existingSub.review_status === "reviewed" ? "bg-blue-500/20 text-blue-400" : "bg-yellow-500/20 text-yellow-400"}`}>
-              {existingSub.review_status === "reviewed" ? "Reviewed" : "Pending Review"}
+            <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${existingSub?.review_status === "reviewed" ? "bg-blue-500/20 text-blue-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+              {existingSub?.review_status === "reviewed" ? "Reviewed" : "Pending Review"}
             </span>
-            <span className="text-sm text-gray-400">Score: {existingSub.score}</span>
+            {existingSub?.score !== undefined && <span className="text-sm text-gray-400">Score: {existingSub.score}</span>}
           </div>
         </div>
-
         <div className="space-y-4">
           {reviewAnswers.map((ans, i) => {
             const q = ans.question || questions.find(qq => qq.id === ans.question_id);
@@ -186,109 +212,118 @@ export default function MemberTaskPage() {
     );
   }
 
-  // ── Detail View (Answer Questions) ──
-  if (view === "detail" && selectedTask) {
+  // ── Questions View (answer) ──
+  if (view === "questions" && selectedEvent) {
     return (
       <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
-        <button onClick={() => setView("list")} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Tasks
+        <button onClick={goBack} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Events
         </button>
         <div>
-          <h1 className="text-3xl font-heading tracking-wide">{selectedTask.title}</h1>
-          {selectedTask.description && <p className="text-gray-400 mt-1">{selectedTask.description}</p>}
-          <p className="text-xs text-gray-500 mt-2">{questions.length} question{questions.length !== 1 ? "s" : ""} • {selectedTask.event?.name}</p>
+          <h1 className="text-3xl font-heading tracking-wide">{selectedEvent.name}</h1>
+          <p className="text-xs text-gray-500 mt-2">{questions.length} question{questions.length !== 1 ? "s" : ""}</p>
         </div>
 
-        <div className="space-y-6">
-          {questions.map((q, i) => (
-            <div key={q.id} className="glass-card p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-500">Q{i + 1}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${q.type === "mcq" ? "bg-blue-500/20 text-blue-400" : q.type === "coding" ? "bg-purple-500/20 text-purple-400" : "bg-cyan-500/20 text-cyan-400"}`}>{q.type}</span>
-                <span className="text-[10px] text-gray-500">{q.points} pts</span>
-              </div>
-              <p className="text-white font-medium">{q.text}</p>
+        {questions.length === 0 ? (
+          <div className="glass-card p-12 text-center">
+            <ClipboardList className="w-12 h-12 mx-auto text-gray-600 mb-4" />
+            <p className="text-gray-400">No questions approved yet. Check back later.</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-6">
+              {questions.map((q, i) => (
+                <div key={q.id} className="glass-card p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-500">Q{i + 1}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${q.type === "mcq" ? "bg-blue-500/20 text-blue-400" : q.type === "coding" ? "bg-purple-500/20 text-purple-400" : "bg-cyan-500/20 text-cyan-400"}`}>{q.type}</span>
+                    <span className="text-[10px] text-gray-500">{q.points} pts</span>
+                  </div>
+                  <p className="text-white font-medium">{q.text}</p>
 
-              {q.type === "mcq" && q.options && Array.isArray(q.options) ? (
-                <div className="space-y-2">
-                  {(q.options as string[]).map((opt: string, oIdx: number) => (
-                    <label key={oIdx} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${answers[q.id]?.option === oIdx ? "bg-[#00629B]/20 border-[#00bfff]/40 text-[#00bfff]" : "border-white/10 hover:bg-white/5 text-gray-300"}`}>
-                      <input type="radio" name={`q-${q.id}`} checked={answers[q.id]?.option === oIdx}
-                        onChange={() => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: oIdx } }))}
-                        className="accent-[#00bfff] w-4 h-4" />
-                      <span className="text-sm">{String.fromCharCode(65 + oIdx)}. {opt}</span>
-                    </label>
-                  ))}
+                  {q.type === "mcq" && q.options && Array.isArray(q.options) ? (
+                    <div className="space-y-2">
+                      {(q.options as string[]).map((opt: string, oIdx: number) => (
+                        <label key={oIdx} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${answers[q.id]?.option === oIdx ? "bg-[#00629B]/20 border-[#00bfff]/40 text-[#00bfff]" : "border-white/10 hover:bg-white/5 text-gray-300"}`}>
+                          <input type="radio" name={`q-${q.id}`} checked={answers[q.id]?.option === oIdx}
+                            onChange={() => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: oIdx } }))}
+                            className="accent-[#00bfff] w-4 h-4" />
+                          <span className="text-sm">{String.fromCharCode(65 + oIdx)}. {opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : q.type === "coding" ? (
+                    <textarea rows={10} value={answers[q.id]?.text || ""}
+                      onChange={e => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                      className="w-full bg-[#0a1628] border border-white/10 rounded-lg p-4 font-mono text-green-400 focus:outline-none focus:border-[#00bfff] text-sm"
+                      placeholder="Write your code here..." />
+                  ) : (
+                    <textarea rows={5} value={answers[q.id]?.text || ""}
+                      onChange={e => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                      className="input-field resize-none text-sm" placeholder="Type your answer here..." />
+                  )}
                 </div>
-              ) : q.type === "coding" ? (
-                <textarea rows={10} value={answers[q.id]?.text || ""}
-                  onChange={e => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
-                  className="w-full bg-[#0a1628] border border-white/10 rounded-lg p-4 font-mono text-green-400 focus:outline-none focus:border-[#00bfff] text-sm"
-                  placeholder="Write your code here..." />
-              ) : (
-                <textarea rows={5} value={answers[q.id]?.text || ""}
-                  onChange={e => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
-                  className="input-field resize-none text-sm" placeholder="Type your answer here..." />
-              )}
+              ))}
             </div>
-          ))}
-        </div>
-
-        <div className="flex justify-end pb-8">
-          <button onClick={submitTask} disabled={submitting} className="btn-primary px-8 py-3 text-lg flex items-center gap-2">
-            {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</> : <><Send className="w-5 h-5" /> Submit Assessment</>}
-          </button>
-        </div>
+            <div className="flex justify-end pb-8">
+              <button onClick={submitTask} disabled={submitting} className="btn-primary px-8 py-3 text-lg flex items-center gap-2">
+                {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</> : <><Send className="w-5 h-5" /> Submit</>}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
 
-  // ── List View ──
+  // ── Events List View ──
   const typeIcons: Record<string, React.ReactNode> = {
-    mcq: <HelpCircle className="w-5 h-5" />,
-    coding: <Code className="w-5 h-5" />,
-    general: <FileText className="w-5 h-5" />,
+    mcq: <HelpCircle className="w-5 h-5" />, coding: <Code className="w-5 h-5" />, general: <FileText className="w-5 h-5" />,
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
       <div>
         <h1 className="text-4xl font-heading tracking-wide mb-2">My Tasks</h1>
-        <p className="text-gray-400">Complete tasks assigned to your booked events.</p>
+        <p className="text-gray-400">Your booked events with available tasks.</p>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-48"><Loader2 className="w-8 h-8 animate-spin text-[#00bfff]" /></div>
-      ) : tasks.length === 0 ? (
+      ) : bookedEvents.length === 0 ? (
         <div className="glass-card p-12 text-center border border-dashed border-white/10">
           <ClipboardList className="w-12 h-12 mx-auto text-gray-600 mb-4" />
-          <p className="text-gray-400 font-medium">No tasks available.</p>
-          <p className="text-gray-500 text-sm mt-1">Book events to see tasks assigned by admins.</p>
+          <p className="text-gray-400 font-medium">No booked events.</p>
+          <p className="text-gray-500 text-sm mt-1">Book events first to see tasks here.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {tasks.map(task => {
-            const sub = task.submission;
-            const statusLabel = sub?.completed ? (sub.review_status === "reviewed" ? "Reviewed" : "Submitted") : "Not Started";
-            const statusColor = sub?.completed ? (sub.review_status === "reviewed" ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400") : "bg-gray-500/20 text-gray-400";
+          {bookedEvents.map(event => {
+            const eventTasks = event.tasks || [];
+            const hasApproved = eventTasks.length > 0;
+            const firstTask = eventTasks[0];
+            const sub = firstTask?.submission;
+            const statusLabel = !hasApproved ? "No Tasks Yet" : sub?.completed ? (sub.review_status === "reviewed" ? "Reviewed" : "Submitted") : "Start Task";
+            const statusColor = !hasApproved ? "bg-gray-500/20 text-gray-400" : sub?.completed ? (sub.review_status === "reviewed" ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400") : "bg-amber-500/20 text-amber-400";
 
             return (
-              <button key={task.id} onClick={() => openTask(task)}
-                className="w-full text-left glass-card p-5 hover:border-[#00bfff]/20 transition-all border border-white/5 group">
+              <button key={event.id} onClick={() => openEvent(event)} disabled={!hasApproved}
+                className={`w-full text-left glass-card p-5 transition-all border border-white/5 group ${hasApproved ? "hover:border-[#00bfff]/20 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}>
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${task.type === "mcq" ? "bg-blue-500/10 text-blue-400" : task.type === "coding" ? "bg-purple-500/10 text-purple-400" : "bg-cyan-500/10 text-cyan-400"}`}>
-                    {typeIcons[task.type]}
+                  <div className="w-12 h-12 rounded-xl bg-[#00629B]/10 text-[#00bfff] flex items-center justify-center shrink-0">
+                    <Calendar className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium text-white group-hover:text-[#00bfff] transition-colors">{task.title || "Untitled Task"}</h3>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${task.type === "mcq" ? "bg-blue-500/20 text-blue-400" : task.type === "coding" ? "bg-purple-500/20 text-purple-400" : "bg-cyan-500/20 text-cyan-400"}`}>{task.type}</span>
+                      <h3 className="font-medium text-white group-hover:text-[#00bfff] transition-colors">{event.name}</h3>
+                      {event.society?.abbreviation && <span className="text-[10px] text-gray-500">({event.society.abbreviation})</span>}
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${statusColor}`}>{statusLabel}</span>
                     </div>
-                    {task.description && <p className="text-sm text-gray-500 mt-1 truncate">{task.description}</p>}
-                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
-                      <Clock className="w-3 h-3" /> {task.event?.name} • {new Date(task.created_at).toLocaleDateString()}
-                    </p>
+                    {event.description && <p className="text-sm text-gray-500 mt-1 truncate">{event.description}</p>}
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                      {event.date && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(event.date).toLocaleDateString()}</span>}
+                      {hasApproved && <span>{eventTasks.length} task{eventTasks.length !== 1 ? "s" : ""}</span>}
+                    </div>
                   </div>
                 </div>
               </button>
