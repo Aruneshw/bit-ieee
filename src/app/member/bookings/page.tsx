@@ -11,15 +11,21 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
 
-  const fetchEvents = useCallback(async (sid: string, uid: string) => {
+  const fetchEvents = useCallback(async (sid: string | null, uid: string) => {
     // Fetch events for this society OR global events (no society)
-    const { data: eventsData } = await supabase
+    let query = supabase
       .from("events")
       .select("*, society:societies(name, abbreviation), organiser:users(name)")
-      .or(`society_id.eq.${sid},society_id.is.null`)
       .eq("status", "approved")
-      .eq("booking_enabled", true)
       .order("date", { ascending: true });
+
+    if (sid) {
+      query = query.or(`society_id.eq.${sid},society_id.is.null`);
+    } else {
+      query = query.is("society_id", null);
+    }
+
+    const { data: eventsData } = await query;
 
     const { data: bookings } = await supabase
       .from("event_bookings")
@@ -50,11 +56,7 @@ export default function BookingsPage() {
         .eq("email", user.email.toLowerCase())
         .single();
 
-      if (profile?.society_id) {
-        fetchEvents(profile.society_id, user.id);
-      } else {
-        setLoading(false);
-      }
+      fetchEvents(profile?.society_id || null, user.id);
     }
     init();
   }, [fetchEvents]);
