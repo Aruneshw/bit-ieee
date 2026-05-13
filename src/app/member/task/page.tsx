@@ -2,22 +2,22 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useState, useEffect } from "react";
-import { ClipboardList, Code, FileText, HelpCircle, CheckCircle, Clock, Send, ArrowLeft, Loader2, MessageSquare, Calendar } from "lucide-react";
+import { ClipboardList, CheckCircle, Clock, Send, ArrowLeft, Loader2, MessageSquare, Calendar, Lock } from "lucide-react";
 import { toast } from "sonner";
 import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
 
-type View = "events" | "questions" | "result";
-
 export default function MemberTaskPage() {
   const supabase = createClient();
-  const [view, setView] = useState<View>("events");
+  const [view, setView] = useState<"events" | "task">("events");
   const [bookedEvents, setBookedEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [questions, setQuestions] = useState<TaskQuestion[]>([]);
   const [taskId, setTaskId] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Record<string, { text: string; option: number | null }>>({});
-  const [existingSub, setExistingSub] = useState<any | null>(null);
-  const [reviewAnswers, setReviewAnswers] = useState<SubmissionAnswer[]>([]);
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
+  // Map of question_id → existing answer (already submitted)
+  const [existingAnswers, setExistingAnswers] = useState<Record<string, SubmissionAnswer>>({});
+  // Map of question_id → new answer being typed
+  const [newAnswers, setNewAnswers] = useState<Record<string, { text: string; option: number | null }>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState("");
@@ -35,14 +35,12 @@ export default function MemberTaskPage() {
 
       const { data: evts } = await supabase.from("events")
         .select("id, name, description, date, venue, event_type, society:societies(abbreviation)")
-        .in("id", bookedIds)
-        .eq("status", "approved")
+        .in("id", bookedIds).eq("status", "approved")
         .order("created_at", { ascending: false });
 
       const { data: tasks } = await supabase.from("tasks")
         .select("id, event_id, title, type, status")
-        .eq("status", "approved")
-        .in("event_id", bookedIds);
+        .eq("status", "approved").in("event_id", bookedIds);
 
       const { data: subs } = await supabase.from("task_submissions")
         .select("task_id, completed, review_status")
@@ -54,7 +52,6 @@ export default function MemberTaskPage() {
         list.push(t);
         taskMap.set(t.event_id, list);
       });
-
       const subMap = new Map((subs || []).map(s => [s.task_id, s]));
 
       const enriched = (evts || []).map(ev => ({
@@ -71,11 +68,7 @@ export default function MemberTaskPage() {
   async function openEvent(event: any) {
     setSelectedEvent(event);
     const eventTasks = event.tasks || [];
-
-    if (eventTasks.length === 0) {
-      toast.info("No tasks available for this event yet.");
-      return;
-    }
+    if (eventTasks.length === 0) { toast.info("No tasks available yet."); return; }
 
     const task = eventTasks[0];
     setTaskId(task.id);
@@ -85,76 +78,84 @@ export default function MemberTaskPage() {
       .eq("task_id", task.id).eq("status", "approved").order("sort_order");
     setQuestions((qs || []) as TaskQuestion[]);
 
-    // Check existing submission
+    // Load existing submission + answers
     const { data: sub } = await supabase.from("task_submissions")
-      .select("*, submission_answers(*, question:task_questions(*))")
+      .select("*, submission_answers(*)")
       .eq("task_id", task.id).eq("user_id", userId).single();
 
-    if (sub?.completed) {
-      const answeredCount = (sub.submission_answers || []).length;
-      const totalApproved = (qs || []).length;
-
-      // If new questions were added after submission, let member re-answer
-      if (totalApproved > answeredCount) {
-        toast.info(`${totalApproved - answeredCount} new question(s) added! Please re-submit.`);
-        // Delete old submission so they can start fresh
-        await supabase.from("submission_answers").delete().eq("submission_id", sub.id);
-        await supabase.from("task_submissions").delete().eq("id", sub.id);
-        const init: Record<string, { text: string; option: number | null }> = {};
-        (qs || []).forEach((q: any) => { init[q.id] = { text: "", option: null }; });
-        setAnswers(init);
-        setView("questions");
-        return;
-      }
-
-      // Otherwise show results
-      setExistingSub(sub);
-      setReviewAnswers((sub.submission_answers || []) as SubmissionAnswer[]);
-      setView("result");
-      return;
+    const answeredMap: Record<string, SubmissionAnswer> = {};
+    if (sub) {
+      setSubmissionId(sub.id);
+      (sub.submission_answers || []).forEach((a: SubmissionAnswer) => {
+        answeredMap[a.question_id] = a;
+      });
     }
+    setExistingAnswers(answeredMap);
 
-    // No submission yet — show questions
+    // Init new answers only for unanswered questions
     const init: Record<string, { text: string; option: number | null }> = {};
-    (qs || []).forEach((q: any) => { init[q.id] = { text: "", option: null }; });
-    setAnswers(init);
-    setView("questions");
+    (qs || []).forEach((q: any) => {
+      if (!answeredMap[q.id]) {
+        init[q.id] = { text: "", option: null };
+      }
+    });
+    setNewAnswers(init);
+    setView("task");
   }
 
-  async function submitTask() {
+  async function submitNewAnswers() {
     if (!taskId) return;
+    const unanswered = Object.keys(newAnswers);
+    if (unanswered.length === 0) { toast.info("No new questions to submit."); return; }
     setSubmitting(true);
+
     try {
-      let score = 0;
-      for (const q of questions) {
-        const ans = answers[q.id];
-        if (q.type === "mcq" && q.correct_answer !== null && ans?.option !== null) {
-          if (String(ans.option) === q.correct_answer) score += q.points;
+      let subId = submissionId;
+
+      // Create submission if none exists
+      if (!subId) {
+        const { data: newSub, error } = await supabase.from("task_submissions").insert({
+          task_id: taskId, user_id: userId,
+          answers: [], score: 0, completed: true, review_status: "pending",
+        }).select().single();
+        if (error) throw error;
+        subId = newSub.id;
+        setSubmissionId(subId);
+      }
+
+      // Auto-score MCQs
+      let newScore = 0;
+      const answerRows = unanswered.map(qId => {
+        const q = questions.find(qq => qq.id === qId);
+        const ans = newAnswers[qId];
+        if (q?.type === "mcq" && q.correct_answer !== null && ans?.option !== null) {
+          if (String(ans.option) === q.correct_answer) newScore += q.points;
         }
-      }
+        return {
+          submission_id: subId!,
+          question_id: qId,
+          answer_text: ans?.text || null,
+          selected_option: ans?.option ?? null,
+        };
+      });
 
-      const { data: submission, error: subErr } = await supabase.from("task_submissions").insert({
-        task_id: taskId, user_id: userId,
-        answers: Object.entries(answers).map(([qId, a]) => ({ question_id: qId, ...a })),
-        score, completed: true, review_status: "pending",
-      }).select().single();
-      if (subErr) throw subErr;
+      const { error: ansErr } = await supabase.from("submission_answers").insert(answerRows);
+      if (ansErr) throw ansErr;
 
-      const answerRows = questions.map(q => ({
-        submission_id: submission.id, question_id: q.id,
-        answer_text: answers[q.id]?.text || null,
-        selected_option: answers[q.id]?.option ?? null,
-      }));
-      if (answerRows.length > 0) {
-        const { error: ansErr } = await supabase.from("submission_answers").insert(answerRows);
-        if (ansErr) throw ansErr;
-      }
+      // Update submission
+      await supabase.from("task_submissions").update({
+        completed: true, review_status: "pending",
+      }).eq("id", subId!);
 
-      toast.success(`Submitted! Auto-scored MCQs: ${score} pts`);
-      setView("events");
-      setBookedEvents(prev => prev.map(ev => ev.id === selectedEvent?.id ? {
-        ...ev, tasks: ev.tasks.map((t: any) => t.id === taskId ? { ...t, submission: { completed: true, review_status: "pending" } } : t)
-      } : ev));
+      toast.success(`Submitted ${unanswered.length} answer(s)!`);
+
+      // Move new answers to existing answers
+      const updated = { ...existingAnswers };
+      answerRows.forEach(r => {
+        updated[r.question_id] = r as any;
+      });
+      setExistingAnswers(updated);
+      setNewAnswers({});
     } catch (err: any) {
       toast.error(err.message || "Submission failed");
     } finally {
@@ -165,12 +166,16 @@ export default function MemberTaskPage() {
   function goBack() {
     setView("events");
     setSelectedEvent(null);
-    setExistingSub(null);
     setQuestions([]);
+    setExistingAnswers({});
+    setNewAnswers({});
   }
 
-  // ── Result View ──
-  if (view === "result" && selectedEvent) {
+  // ── Task View (mixed: reviewed + new) ──
+  if (view === "task" && selectedEvent) {
+    const unansweredCount = Object.keys(newAnswers).length;
+    const allAnswered = unansweredCount === 0;
+
     return (
       <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
         <button onClick={goBack} className="flex items-center gap-2 text-sm transition-colors" style={{ color: "var(--text-secondary)" }}>
@@ -178,56 +183,11 @@ export default function MemberTaskPage() {
         </button>
         <div>
           <h1 className="text-3xl font-heading tracking-wide" style={{ color: "var(--text-primary)" }}>{selectedEvent.name}</h1>
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs font-bold px-2 py-0.5 rounded bg-green-100 text-green-700 uppercase">Submitted</span>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${existingSub?.review_status === "reviewed" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"}`}>
-              {existingSub?.review_status === "reviewed" ? "Reviewed" : "Pending Review"}
-            </span>
-            {existingSub?.score !== undefined && <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Score: {existingSub.score}</span>}
-          </div>
-        </div>
-        <div className="space-y-4">
-          {reviewAnswers.map((ans, i) => {
-            const q = ans.question || questions.find(qq => qq.id === ans.question_id);
-            return (
-              <div key={ans.id} className="glass-card p-5 space-y-3">
-                <div className="flex items-start justify-between">
-                  <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Q{i + 1}: {q?.text}</p>
-                  {ans.is_correct !== null && (
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${ans.is_correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {ans.is_correct ? "✓ Correct" : "✗ Wrong"}
-                    </span>
-                  )}
-                </div>
-                <div className="p-3 rounded-lg" style={{ background: "var(--bg-secondary)" }}>
-                  <p className="text-sm font-mono whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
-                    {ans.answer_text || (ans.selected_option !== null && q?.options ? `${String.fromCharCode(65 + ans.selected_option)}: ${(q.options as string[])[ans.selected_option]}` : "No answer")}
-                  </p>
-                </div>
-                {ans.admin_remarks && (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                    <MessageSquare className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-700">{ans.admin_remarks}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Questions View (answer) ──
-  if (view === "questions" && selectedEvent) {
-    return (
-      <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
-        <button onClick={goBack} className="flex items-center gap-2 text-sm transition-colors" style={{ color: "var(--text-secondary)" }}>
-          <ArrowLeft className="w-4 h-4" /> Back to Events
-        </button>
-        <div>
-          <h1 className="text-3xl font-heading tracking-wide" style={{ color: "var(--text-primary)" }}>{selectedEvent.name}</h1>
-          <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>{questions.length} question{questions.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
+            {questions.length} question{questions.length !== 1 ? "s" : ""}
+            {unansweredCount > 0 && <span style={{ color: "var(--accent-primary)" }}> · {unansweredCount} new to answer</span>}
+            {allAnswered && " · All answered ✓"}
+          </p>
         </div>
 
         {questions.length === 0 ? (
@@ -237,47 +197,92 @@ export default function MemberTaskPage() {
           </div>
         ) : (
           <>
-            <div className="space-y-6">
-              {questions.map((q, i) => (
-                <div key={q.id} className="glass-card p-5 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>Q{i + 1}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${q.type === "mcq" ? "bg-blue-100 text-blue-700" : q.type === "coding" ? "bg-purple-100 text-purple-700" : "bg-cyan-100 text-cyan-700"}`}>{q.type}</span>
-                    <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{q.points} pts</span>
-                  </div>
-                  <p className="font-medium" style={{ color: "var(--text-primary)" }}>{q.text}</p>
+            <div className="space-y-5">
+              {questions.map((q, i) => {
+                const existing = existingAnswers[q.id];
+                const isNew = !existing;
 
-                  {q.type === "mcq" && q.options && Array.isArray(q.options) ? (
-                    <div className="space-y-2">
-                      {(q.options as string[]).map((opt: string, oIdx: number) => (
-                        <label key={oIdx} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${answers[q.id]?.option === oIdx ? "bg-blue-50 border-blue-400" : "hover:bg-gray-50"}`}
-                          style={answers[q.id]?.option !== oIdx ? { borderColor: "var(--border)", color: "var(--text-primary)" } : { color: "#00629B" }}>
-                          <input type="radio" name={`q-${q.id}`} checked={answers[q.id]?.option === oIdx}
-                            onChange={() => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: oIdx } }))}
-                            className="accent-[#00629B] w-4 h-4" />
-                          <span className="text-sm">{String.fromCharCode(65 + oIdx)}. {opt}</span>
-                        </label>
-                      ))}
+                // ── Already answered question (locked) ──
+                if (!isNew) {
+                  return (
+                    <div key={q.id} className="glass-card p-5 space-y-3 opacity-90">
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
+                        <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>Q{i + 1}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${q.type === "mcq" ? "bg-blue-100 text-blue-700" : q.type === "coding" ? "bg-purple-100 text-purple-700" : "bg-cyan-100 text-cyan-700"}`}>{q.type}</span>
+                        {existing.is_correct !== null && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${existing.is_correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {existing.is_correct ? "✓ Correct" : "✗ Wrong"}
+                          </span>
+                        )}
+                        {existing.is_correct === null && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">Pending Review</span>
+                        )}
+                      </div>
+                      <p className="font-medium" style={{ color: "var(--text-primary)" }}>{q.text}</p>
+                      <div className="p-3 rounded-lg" style={{ background: "var(--bg-secondary)" }}>
+                        <p className="text-sm font-mono whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
+                          {existing.answer_text || (existing.selected_option !== null && q.options
+                            ? `${String.fromCharCode(65 + existing.selected_option)}: ${(q.options as string[])[existing.selected_option]}`
+                            : "No answer")}
+                        </p>
+                      </div>
+                      {existing.admin_remarks && (
+                        <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                          <MessageSquare className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <p className="text-sm text-amber-700">{existing.admin_remarks}</p>
+                        </div>
+                      )}
                     </div>
-                  ) : q.type === "coding" ? (
-                    <textarea rows={10} value={answers[q.id]?.text || ""}
-                      onChange={e => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
-                      className="w-full rounded-lg p-4 font-mono text-sm focus:outline-none"
-                      style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-                      placeholder="Write your code here..." />
-                  ) : (
-                    <textarea rows={5} value={answers[q.id]?.text || ""}
-                      onChange={e => setAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
-                      className="input-field resize-none text-sm" placeholder="Type your answer here..." />
-                  )}
-                </div>
-              ))}
+                  );
+                }
+
+                // ── New question (answerable) ──
+                return (
+                  <div key={q.id} className="glass-card p-5 space-y-4 border-2" style={{ borderColor: "var(--accent-primary)" }}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold" style={{ color: "var(--accent-primary)" }}>Q{i + 1} — NEW</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${q.type === "mcq" ? "bg-blue-100 text-blue-700" : q.type === "coding" ? "bg-purple-100 text-purple-700" : "bg-cyan-100 text-cyan-700"}`}>{q.type}</span>
+                      <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{q.points} pts</span>
+                    </div>
+                    <p className="font-medium" style={{ color: "var(--text-primary)" }}>{q.text}</p>
+
+                    {q.type === "mcq" && q.options && Array.isArray(q.options) ? (
+                      <div className="space-y-2">
+                        {(q.options as string[]).map((opt: string, oIdx: number) => (
+                          <label key={oIdx} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${newAnswers[q.id]?.option === oIdx ? "bg-blue-50 border-blue-400" : "hover:bg-gray-50"}`}
+                            style={newAnswers[q.id]?.option !== oIdx ? { borderColor: "var(--border)", color: "var(--text-primary)" } : { color: "#00629B" }}>
+                            <input type="radio" name={`q-${q.id}`} checked={newAnswers[q.id]?.option === oIdx}
+                              onChange={() => setNewAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: oIdx } }))}
+                              className="accent-[#00629B] w-4 h-4" />
+                            <span className="text-sm">{String.fromCharCode(65 + oIdx)}. {opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : q.type === "coding" ? (
+                      <textarea rows={10} value={newAnswers[q.id]?.text || ""}
+                        onChange={e => setNewAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                        className="w-full rounded-lg p-4 font-mono text-sm focus:outline-none"
+                        style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                        placeholder="Write your code here..." />
+                    ) : (
+                      <textarea rows={5} value={newAnswers[q.id]?.text || ""}
+                        onChange={e => setNewAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                        className="input-field resize-none text-sm" placeholder="Type your answer here..." />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex justify-end pb-8">
-              <button onClick={submitTask} disabled={submitting} className="btn-primary px-8 py-3 text-lg flex items-center gap-2">
-                {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</> : <><Send className="w-5 h-5" /> Submit</>}
-              </button>
-            </div>
+
+            {/* Submit button — only if there are unanswered questions */}
+            {unansweredCount > 0 && (
+              <div className="flex justify-end pb-8">
+                <button onClick={submitNewAnswers} disabled={submitting} className="btn-primary px-8 py-3 text-lg flex items-center gap-2">
+                  {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</> : <><Send className="w-5 h-5" /> Submit ({unansweredCount})</>}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
