@@ -38,22 +38,27 @@ export function CalendarView() {
 
     if (data) {
       // Transform Supabase data into react-big-calendar format
-      const calendarEvents = data.map((e) => {
-        const startDate = new Date(e.event_date + "T" + (e.start_time || "00:00"));
-        const endDate = e.end_time 
-          ? new Date(e.event_date + "T" + e.end_time) 
-          : new Date(startDate.getTime() + 60 * 60 * 1000); // default 1 hr
+      const calendarEvents = data
+        .filter((e) => e.date) // skip events without a date
+        .map((e) => {
+          const dateStr = e.date.split("T")[0]; // "2026-05-13"
+          const startDate = e.start_time
+            ? new Date(dateStr + "T" + e.start_time)
+            : new Date(dateStr + "T09:00");
+          const endDate = e.end_time
+            ? new Date(dateStr + "T" + e.end_time)
+            : new Date(startDate.getTime() + 60 * 60 * 1000); // default 1 hr
 
-        return {
-          id: e.id,
-          title: e.name,
-          start: startDate,
-          end: endDate,
-          is_ieee_official: e.is_ieee_official || false,
-          desc: e.short_description || "",
-          venue: e.venue || "Virtual",
-        };
-      });
+          return {
+            id: e.id,
+            title: e.name,
+            start: startDate,
+            end: endDate,
+            is_ieee_official: e.is_ieee_official || false,
+            desc: e.description || "",
+            venue: e.venue || "Virtual",
+          };
+        });
       setEvents(calendarEvents);
     }
     setLoading(false);

@@ -25,10 +25,11 @@ export default function BookingsPage() {
       .eq("user_id", uid);
 
     const bookedIds = new Set(bookings?.map(b => b.event_id) || []);
-    const now = new Date();
+    // Events are "past" only if the date is strictly before today
+    const todayStr = new Date().toISOString().split('T')[0]; // "2026-05-13"
     const categorized = (eventsData || []).map(e => ({
       ...e,
-      isPast: e.date ? new Date(e.date) < now : false,
+      isPast: e.date ? (e.date.split('T')[0] < todayStr) : false,
       isBooked: bookedIds.has(e.id),
     }));
 
