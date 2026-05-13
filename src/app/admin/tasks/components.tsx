@@ -142,6 +142,11 @@ export function SubmissionReviewCard({ submission, questions, onUpdateAnswer }: 
   const [expanded, setExpanded] = useState(false);
   const answers: SubmissionAnswer[] = submission.submission_answers || [];
 
+  // Per-question status counts
+  const correct = answers.filter(a => a.is_correct === true).length;
+  const wrong = answers.filter(a => a.is_correct === false).length;
+  const pending = answers.filter(a => a.is_correct === null || a.is_correct === undefined).length;
+
   return (
     <div className="p-4 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}>
       <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between">
@@ -151,15 +156,18 @@ export function SubmissionReviewCard({ submission, questions, onUpdateAnswer }: 
           </div>
           <div className="text-left">
             <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{submission.user?.name || "Unknown"}</p>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>{new Date(submission.submitted_at).toLocaleString()}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>{submission.user?.email}</p>
+              <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>{new Date(submission.submitted_at).toLocaleString()}</span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-            submission.review_status === "reviewed" ? "bg-green-100 text-green-700" :
-            submission.review_status === "partial" ? "bg-yellow-100 text-yellow-700" :
-            "bg-gray-100 text-gray-600"
-          }`}>{submission.review_status}</span>
+        <div className="flex items-center gap-2">
+          {/* Per-question status badges */}
+          {correct > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-100 text-green-700">✓ {correct}</span>}
+          {wrong > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700">✗ {wrong}</span>}
+          {pending > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">⏳ {pending}</span>}
+          <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{answers.length} answer{answers.length !== 1 ? "s" : ""}</span>
           {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "var(--text-muted)" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "var(--text-muted)" }} />}
         </div>
       </button>
@@ -169,7 +177,7 @@ export function SubmissionReviewCard({ submission, questions, onUpdateAnswer }: 
             const q = questions.find(qq => qq.id === ans.question_id);
             return <AnswerReviewRow key={ans.id} answer={ans} question={q} onUpdate={onUpdateAnswer} />;
           })}
-          {answers.length === 0 && <p className="text-xs" style={{ color: "var(--text-muted)" }}>No answers recorded.</p>}
+          {answers.length === 0 && <p className="text-xs" style={{ color: "var(--text-muted)" }}>No answers recorded yet.</p>}
         </div>
       )}
     </div>

@@ -27,7 +27,7 @@ export default function MemberTaskPage() {
   const [existingAnswers, setExistingAnswers] = useState<Record<string, SubmissionAnswer>>({});
   const [newAnswers, setNewAnswers] = useState<Record<string, { text: string; option: number | null }>>({});
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingQId, setSubmittingQId] = useState<string | null>(null);
   const [userId, setUserId] = useState("");
 
   /**
@@ -150,23 +150,31 @@ export default function MemberTaskPage() {
   }, [userId]);
 
   /**
-   * Submit answers for new (unanswered) questions only.
-   * Creates or reuses existing submission record.
-   * Uses upsert pattern with unique constraint protection.
+   * Submit answer for a single question.
+   * Creates submission record if needed, then inserts the individual answer.
    */
-  async function submitNewAnswers() {
+  async function submitSingleAnswer(questionId: string) {
     if (!taskId) return;
-    const unansweredIds = Object.keys(newAnswers);
-    if (unansweredIds.length === 0) {
-      toast.info("No new questions to submit.");
+    const ans = newAnswers[questionId];
+    if (!ans) return;
+    
+    // Validate: must have some content
+    const q = questions.find(qq => qq.id === questionId);
+    if (q?.type === "mcq" && ans.option === null) {
+      toast.error("Please select an option before submitting.");
       return;
     }
-    setSubmitting(true);
+    if ((q?.type === "coding" || q?.type === "general") && !ans.text?.trim()) {
+      toast.error("Please type your answer before submitting.");
+      return;
+    }
+
+    setSubmittingQId(questionId);
 
     try {
       let subId = submissionId;
 
-      // Create submission if none exists (with duplicate protection)
+      // Create submission if none exists
       if (!subId) {
         const { data: newSub, error } = await supabase
           .from("task_submissions")
@@ -182,7 +190,6 @@ export default function MemberTaskPage() {
           .single();
 
         if (error) {
-          // Handle race condition: submission already exists
           if (error.code === "23505") {
             const { data: existing } = await supabase
               .from("task_submissions")
@@ -201,54 +208,58 @@ export default function MemberTaskPage() {
         setSubmissionId(subId);
       }
 
-      // Build answer rows and auto-score MCQs
-      let addedScore = 0;
-      const answerRows = unansweredIds.map(qId => {
-        const q = questions.find(qq => qq.id === qId);
-        const ans = newAnswers[qId];
-        if (q?.type === "mcq" && q.correct_answer !== null && ans?.option !== null) {
-          if (String(ans.option) === q.correct_answer) addedScore += q.points;
-        }
-        return {
-          submission_id: subId!,
-          question_id: qId,
-          answer_text: ans?.text?.trim() || null,
-          selected_option: ans?.option ?? null,
-        };
-      });
+      // Auto-score if MCQ
+      let isAutoCorrect: boolean | null = null;
+      if (q?.type === "mcq" && q.correct_answer !== null && ans.option !== null) {
+        isAutoCorrect = String(ans.option) === q.correct_answer;
+      }
 
+      // Insert single answer
       const { error: ansErr } = await supabase
         .from("submission_answers")
-        .insert(answerRows);
+        .insert({
+          submission_id: subId!,
+          question_id: questionId,
+          answer_text: ans.text?.trim() || null,
+          selected_option: ans.option ?? null,
+        });
+
       if (ansErr) {
-        // Handle duplicate answer (already submitted for this question)
         if (ansErr.code === "23505") {
-          toast.error("You already answered some of these questions. Refreshing...");
-          await openEvent(selectedEvent);
+          toast.error("You already answered this question.");
           return;
         }
         throw ansErr;
       }
 
-      // Update submission status
+      // Update submission
       await supabase
         .from("task_submissions")
         .update({ completed: true, review_status: "pending" })
         .eq("id", subId!);
 
-      toast.success(`Submitted ${unansweredIds.length} answer(s)!`);
+      toast.success("Answer submitted!");
 
-      // Update local state — move new answers to existing
-      const updated = { ...existingAnswers };
-      answerRows.forEach(r => {
-        updated[r.question_id] = r as any;
+      // Move to existing answers
+      setExistingAnswers(prev => ({
+        ...prev,
+        [questionId]: {
+          question_id: questionId,
+          answer_text: ans.text?.trim() || null,
+          selected_option: ans.option ?? null,
+          is_correct: isAutoCorrect,
+          admin_remarks: null,
+        } as any,
+      }));
+      setNewAnswers(prev => {
+        const copy = { ...prev };
+        delete copy[questionId];
+        return copy;
       });
-      setExistingAnswers(updated);
-      setNewAnswers({});
     } catch (err: any) {
-      toast.error(err.message || "Submission failed. Please try again.");
+      toast.error(err.message || "Submission failed.");
     } finally {
-      setSubmitting(false);
+      setSubmittingQId(null);
     }
   }
 
@@ -434,30 +445,28 @@ export default function MemberTaskPage() {
                         placeholder="Type your answer here..."
                       />
                     )}
+
+                    {/* Per-question submit button */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => submitSingleAnswer(q.id)}
+                        disabled={submittingQId === q.id}
+                        className="btn-primary text-sm flex items-center gap-2 px-5 py-2"
+                      >
+                        {submittingQId === q.id ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                        ) : (
+                          <><Send className="w-4 h-4" /> Submit Answer</>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            {unansweredCount > 0 && (
-              <div className="flex justify-end pb-8">
-                <button
-                  onClick={submitNewAnswers}
-                  disabled={submitting}
-                  className="btn-primary px-8 py-3 text-lg flex items-center gap-2"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" /> Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" /> Submit ({unansweredCount})
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+            {/* Spacer at bottom */}
+            {unansweredCount > 0 && <div className="pb-4" />}
           </>
         )}
       </div>
