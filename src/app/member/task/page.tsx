@@ -1,11 +1,21 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useState, useEffect } from "react";
-import { ClipboardList, CheckCircle, Clock, Send, ArrowLeft, Loader2, MessageSquare, Calendar, Lock } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  ClipboardList, CheckCircle, Clock, Send, ArrowLeft,
+  Loader2, MessageSquare, Calendar, Lock,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
 
+/**
+ * Member Task Page
+ *
+ * Shows booked events with available tasks.
+ * Members answer approved questions incrementally —
+ * reviewed answers are locked; new questions are answerable.
+ */
 export default function MemberTaskPage() {
   const supabase = createClient();
   const [view, setView] = useState<"events" | "task">("events");
@@ -14,142 +24,221 @@ export default function MemberTaskPage() {
   const [questions, setQuestions] = useState<TaskQuestion[]>([]);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
-  // Map of question_id → existing answer (already submitted)
   const [existingAnswers, setExistingAnswers] = useState<Record<string, SubmissionAnswer>>({});
-  // Map of question_id → new answer being typed
   const [newAnswers, setNewAnswers] = useState<Record<string, { text: string; option: number | null }>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState("");
 
-  // Load booked events
+  /**
+   * Load booked events + their task status on mount.
+   * Uses batch queries to minimize DB round-trips.
+   */
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-      setUserId(user.id);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setLoading(false); return; }
+        setUserId(user.id);
 
-      const { data: bookings } = await supabase.from("event_bookings").select("event_id").eq("user_id", user.id);
-      const bookedIds = (bookings || []).map(b => b.event_id);
-      if (bookedIds.length === 0) { setLoading(false); return; }
+        // Batch: bookings, events, tasks, submissions
+        const { data: bookings } = await supabase
+          .from("event_bookings")
+          .select("event_id")
+          .eq("user_id", user.id);
+        const bookedIds = (bookings || []).map(b => b.event_id);
+        if (bookedIds.length === 0) { setLoading(false); return; }
 
-      const { data: evts } = await supabase.from("events")
-        .select("id, name, description, date, venue, event_type, society:societies(abbreviation)")
-        .in("id", bookedIds).eq("status", "approved")
-        .order("created_at", { ascending: false });
+        const [evtRes, taskRes, subRes] = await Promise.all([
+          supabase.from("events")
+            .select("id, name, description, date, venue, event_type, society:societies(abbreviation)")
+            .in("id", bookedIds)
+            .eq("status", "approved")
+            .order("date", { ascending: false }),
+          supabase.from("tasks")
+            .select("id, event_id, title, type, status")
+            .eq("status", "approved")
+            .in("event_id", bookedIds),
+          supabase.from("task_submissions")
+            .select("task_id, completed, review_status")
+            .eq("user_id", user.id),
+        ]);
 
-      const { data: tasks } = await supabase.from("tasks")
-        .select("id, event_id, title, type, status")
-        .eq("status", "approved").in("event_id", bookedIds);
+        const taskMap = new Map<string, any[]>();
+        (taskRes.data || []).forEach(t => {
+          const list = taskMap.get(t.event_id) || [];
+          list.push(t);
+          taskMap.set(t.event_id, list);
+        });
+        const subMap = new Map((subRes.data || []).map(s => [s.task_id, s]));
 
-      const { data: subs } = await supabase.from("task_submissions")
-        .select("task_id, completed, review_status")
-        .eq("user_id", user.id);
+        const enriched = (evtRes.data || []).map(ev => ({
+          ...ev,
+          tasks: (taskMap.get(ev.id) || []).map(t => ({
+            ...t,
+            submission: subMap.get(t.id) || null,
+          })),
+          hasTask: taskMap.has(ev.id),
+        }));
 
-      const taskMap = new Map<string, any[]>();
-      (tasks || []).forEach(t => {
-        const list = taskMap.get(t.event_id) || [];
-        list.push(t);
-        taskMap.set(t.event_id, list);
-      });
-      const subMap = new Map((subs || []).map(s => [s.task_id, s]));
-
-      const enriched = (evts || []).map(ev => ({
-        ...ev,
-        tasks: (taskMap.get(ev.id) || []).map(t => ({ ...t, submission: subMap.get(t.id) || null })),
-        hasTask: taskMap.has(ev.id),
-      }));
-
-      setBookedEvents(enriched);
-      setLoading(false);
+        setBookedEvents(enriched);
+      } catch (err: any) {
+        toast.error("Failed to load events: " + err.message);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
-  async function openEvent(event: any) {
+  /**
+   * Open an event's task — loads approved questions and existing answers.
+   * Separates answered vs unanswered questions for the mixed view.
+   */
+  const openEvent = useCallback(async (event: any) => {
     setSelectedEvent(event);
     const eventTasks = event.tasks || [];
-    if (eventTasks.length === 0) { toast.info("No tasks available yet."); return; }
+    if (eventTasks.length === 0) {
+      toast.info("No tasks available for this event yet.");
+      return;
+    }
 
     const task = eventTasks[0];
     setTaskId(task.id);
 
-    // Load all approved questions
-    const { data: qs } = await supabase.from("task_questions").select("*")
-      .eq("task_id", task.id).eq("status", "approved").order("sort_order");
-    setQuestions((qs || []) as TaskQuestion[]);
+    try {
+      // Load approved questions
+      const { data: qs, error: qErr } = await supabase
+        .from("task_questions")
+        .select("*")
+        .eq("task_id", task.id)
+        .eq("status", "approved")
+        .order("sort_order");
+      if (qErr) throw qErr;
+      setQuestions((qs || []) as TaskQuestion[]);
 
-    // Load existing submission + answers
-    const { data: sub } = await supabase.from("task_submissions")
-      .select("*, submission_answers(*)")
-      .eq("task_id", task.id).eq("user_id", userId).single();
+      // Load existing submission + answers
+      const { data: sub } = await supabase
+        .from("task_submissions")
+        .select("*, submission_answers(*)")
+        .eq("task_id", task.id)
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    const answeredMap: Record<string, SubmissionAnswer> = {};
-    if (sub) {
-      setSubmissionId(sub.id);
-      (sub.submission_answers || []).forEach((a: SubmissionAnswer) => {
-        answeredMap[a.question_id] = a;
-      });
-    }
-    setExistingAnswers(answeredMap);
-
-    // Init new answers only for unanswered questions
-    const init: Record<string, { text: string; option: number | null }> = {};
-    (qs || []).forEach((q: any) => {
-      if (!answeredMap[q.id]) {
-        init[q.id] = { text: "", option: null };
+      const answeredMap: Record<string, SubmissionAnswer> = {};
+      if (sub) {
+        setSubmissionId(sub.id);
+        (sub.submission_answers || []).forEach((a: SubmissionAnswer) => {
+          answeredMap[a.question_id] = a;
+        });
+      } else {
+        setSubmissionId(null);
       }
-    });
-    setNewAnswers(init);
-    setView("task");
-  }
+      setExistingAnswers(answeredMap);
 
+      // Init new answers only for unanswered questions
+      const init: Record<string, { text: string; option: number | null }> = {};
+      (qs || []).forEach((q: any) => {
+        if (!answeredMap[q.id]) {
+          init[q.id] = { text: "", option: null };
+        }
+      });
+      setNewAnswers(init);
+      setView("task");
+    } catch (err: any) {
+      toast.error("Failed to load task: " + err.message);
+    }
+  }, [userId]);
+
+  /**
+   * Submit answers for new (unanswered) questions only.
+   * Creates or reuses existing submission record.
+   * Uses upsert pattern with unique constraint protection.
+   */
   async function submitNewAnswers() {
     if (!taskId) return;
-    const unanswered = Object.keys(newAnswers);
-    if (unanswered.length === 0) { toast.info("No new questions to submit."); return; }
+    const unansweredIds = Object.keys(newAnswers);
+    if (unansweredIds.length === 0) {
+      toast.info("No new questions to submit.");
+      return;
+    }
     setSubmitting(true);
 
     try {
       let subId = submissionId;
 
-      // Create submission if none exists
+      // Create submission if none exists (with duplicate protection)
       if (!subId) {
-        const { data: newSub, error } = await supabase.from("task_submissions").insert({
-          task_id: taskId, user_id: userId,
-          answers: [], score: 0, completed: true, review_status: "pending",
-        }).select().single();
-        if (error) throw error;
-        subId = newSub.id;
+        const { data: newSub, error } = await supabase
+          .from("task_submissions")
+          .insert({
+            task_id: taskId,
+            user_id: userId,
+            answers: [],
+            score: 0,
+            completed: true,
+            review_status: "pending",
+          })
+          .select()
+          .single();
+
+        if (error) {
+          // Handle race condition: submission already exists
+          if (error.code === "23505") {
+            const { data: existing } = await supabase
+              .from("task_submissions")
+              .select("id")
+              .eq("task_id", taskId)
+              .eq("user_id", userId)
+              .single();
+            if (existing) subId = existing.id;
+            else throw error;
+          } else {
+            throw error;
+          }
+        } else {
+          subId = newSub.id;
+        }
         setSubmissionId(subId);
       }
 
-      // Auto-score MCQs
-      let newScore = 0;
-      const answerRows = unanswered.map(qId => {
+      // Build answer rows and auto-score MCQs
+      let addedScore = 0;
+      const answerRows = unansweredIds.map(qId => {
         const q = questions.find(qq => qq.id === qId);
         const ans = newAnswers[qId];
         if (q?.type === "mcq" && q.correct_answer !== null && ans?.option !== null) {
-          if (String(ans.option) === q.correct_answer) newScore += q.points;
+          if (String(ans.option) === q.correct_answer) addedScore += q.points;
         }
         return {
           submission_id: subId!,
           question_id: qId,
-          answer_text: ans?.text || null,
+          answer_text: ans?.text?.trim() || null,
           selected_option: ans?.option ?? null,
         };
       });
 
-      const { error: ansErr } = await supabase.from("submission_answers").insert(answerRows);
-      if (ansErr) throw ansErr;
+      const { error: ansErr } = await supabase
+        .from("submission_answers")
+        .insert(answerRows);
+      if (ansErr) {
+        // Handle duplicate answer (already submitted for this question)
+        if (ansErr.code === "23505") {
+          toast.error("You already answered some of these questions. Refreshing...");
+          await openEvent(selectedEvent);
+          return;
+        }
+        throw ansErr;
+      }
 
-      // Update submission
-      await supabase.from("task_submissions").update({
-        completed: true, review_status: "pending",
-      }).eq("id", subId!);
+      // Update submission status
+      await supabase
+        .from("task_submissions")
+        .update({ completed: true, review_status: "pending" })
+        .eq("id", subId!);
 
-      toast.success(`Submitted ${unanswered.length} answer(s)!`);
+      toast.success(`Submitted ${unansweredIds.length} answer(s)!`);
 
-      // Move new answers to existing answers
+      // Update local state — move new answers to existing
       const updated = { ...existingAnswers };
       answerRows.forEach(r => {
         updated[r.question_id] = r as any;
@@ -157,43 +246,59 @@ export default function MemberTaskPage() {
       setExistingAnswers(updated);
       setNewAnswers({});
     } catch (err: any) {
-      toast.error(err.message || "Submission failed");
+      toast.error(err.message || "Submission failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
+  /** Navigate back to events list */
   function goBack() {
     setView("events");
     setSelectedEvent(null);
     setQuestions([]);
     setExistingAnswers({});
     setNewAnswers({});
+    setSubmissionId(null);
+    setTaskId(null);
   }
 
-  // ── Task View (mixed: reviewed + new) ──
+  // ── Task View (mixed: reviewed + new questions) ──
   if (view === "task" && selectedEvent) {
     const unansweredCount = Object.keys(newAnswers).length;
     const allAnswered = unansweredCount === 0;
 
     return (
       <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
-        <button onClick={goBack} className="flex items-center gap-2 text-sm transition-colors" style={{ color: "var(--text-secondary)" }}>
+        <button
+          onClick={goBack}
+          className="flex items-center gap-2 text-sm transition-colors"
+          style={{ color: "var(--text-secondary)" }}
+        >
           <ArrowLeft className="w-4 h-4" /> Back to Events
         </button>
+
         <div>
-          <h1 className="text-3xl font-heading tracking-wide" style={{ color: "var(--text-primary)" }}>{selectedEvent.name}</h1>
+          <h1 className="text-3xl font-heading tracking-wide" style={{ color: "var(--text-primary)" }}>
+            {selectedEvent.name}
+          </h1>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
             {questions.length} question{questions.length !== 1 ? "s" : ""}
-            {unansweredCount > 0 && <span style={{ color: "var(--accent-primary)" }}> · {unansweredCount} new to answer</span>}
-            {allAnswered && " · All answered ✓"}
+            {unansweredCount > 0 && (
+              <span style={{ color: "var(--accent-primary)" }}>
+                {" · "}{unansweredCount} new to answer
+              </span>
+            )}
+            {allAnswered && questions.length > 0 && " · All answered ✓"}
           </p>
         </div>
 
         {questions.length === 0 ? (
           <div className="glass-card p-12 text-center">
             <ClipboardList className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--text-muted)" }} />
-            <p style={{ color: "var(--text-secondary)" }}>No questions approved yet. Check back later.</p>
+            <p style={{ color: "var(--text-secondary)" }}>
+              No questions approved yet. Check back later.
+            </p>
           </div>
         ) : (
           <>
@@ -202,29 +307,39 @@ export default function MemberTaskPage() {
                 const existing = existingAnswers[q.id];
                 const isNew = !existing;
 
-                // ── Already answered question (locked) ──
+                // ── Locked (already answered) ──
                 if (!isNew) {
                   return (
                     <div key={q.id} className="glass-card p-5 space-y-3 opacity-90">
                       <div className="flex items-center gap-2">
                         <Lock className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
-                        <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>Q{i + 1}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${q.type === "mcq" ? "bg-blue-100 text-blue-700" : q.type === "coding" ? "bg-purple-100 text-purple-700" : "bg-cyan-100 text-cyan-700"}`}>{q.type}</span>
-                        {existing.is_correct !== null && (
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${existing.is_correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
+                          Q{i + 1}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                          q.type === "mcq" ? "bg-blue-100 text-blue-700"
+                          : q.type === "coding" ? "bg-purple-100 text-purple-700"
+                          : "bg-cyan-100 text-cyan-700"
+                        }`}>{q.type}</span>
+                        {existing.is_correct !== null ? (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            existing.is_correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                          }`}>
                             {existing.is_correct ? "✓ Correct" : "✗ Wrong"}
                           </span>
-                        )}
-                        {existing.is_correct === null && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">Pending Review</span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">
+                            Pending Review
+                          </span>
                         )}
                       </div>
                       <p className="font-medium" style={{ color: "var(--text-primary)" }}>{q.text}</p>
                       <div className="p-3 rounded-lg" style={{ background: "var(--bg-secondary)" }}>
                         <p className="text-sm font-mono whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
-                          {existing.answer_text || (existing.selected_option !== null && q.options
-                            ? `${String.fromCharCode(65 + existing.selected_option)}: ${(q.options as string[])[existing.selected_option]}`
-                            : "No answer")}
+                          {existing.answer_text
+                            || (existing.selected_option !== null && q.options
+                              ? `${String.fromCharCode(65 + existing.selected_option)}: ${(q.options as string[])[existing.selected_option]}`
+                              : "No answer")}
                         </p>
                       </div>
                       {existing.admin_remarks && (
@@ -237,49 +352,109 @@ export default function MemberTaskPage() {
                   );
                 }
 
-                // ── New question (answerable) ──
+                // ── New (answerable) ──
                 return (
                   <div key={q.id} className="glass-card p-5 space-y-4 border-2" style={{ borderColor: "var(--accent-primary)" }}>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold" style={{ color: "var(--accent-primary)" }}>Q{i + 1} — NEW</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${q.type === "mcq" ? "bg-blue-100 text-blue-700" : q.type === "coding" ? "bg-purple-100 text-purple-700" : "bg-cyan-100 text-cyan-700"}`}>{q.type}</span>
-                      <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{q.points} pts</span>
+                      <span className="text-xs font-bold" style={{ color: "var(--accent-primary)" }}>
+                        Q{i + 1} — NEW
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                        q.type === "mcq" ? "bg-blue-100 text-blue-700"
+                        : q.type === "coding" ? "bg-purple-100 text-purple-700"
+                        : "bg-cyan-100 text-cyan-700"
+                      }`}>{q.type}</span>
+                      <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                        {q.points} pts
+                      </span>
                     </div>
                     <p className="font-medium" style={{ color: "var(--text-primary)" }}>{q.text}</p>
 
                     {q.type === "mcq" && q.options && Array.isArray(q.options) ? (
                       <div className="space-y-2">
                         {(q.options as string[]).map((opt: string, oIdx: number) => (
-                          <label key={oIdx} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${newAnswers[q.id]?.option === oIdx ? "bg-blue-50 border-blue-400" : "hover:bg-gray-50"}`}
-                            style={newAnswers[q.id]?.option !== oIdx ? { borderColor: "var(--border)", color: "var(--text-primary)" } : { color: "#00629B" }}>
-                            <input type="radio" name={`q-${q.id}`} checked={newAnswers[q.id]?.option === oIdx}
-                              onChange={() => setNewAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: oIdx } }))}
-                              className="accent-[#00629B] w-4 h-4" />
-                            <span className="text-sm">{String.fromCharCode(65 + oIdx)}. {opt}</span>
+                          <label
+                            key={oIdx}
+                            className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
+                              newAnswers[q.id]?.option === oIdx
+                                ? "bg-blue-50 border-blue-400"
+                                : "hover:bg-gray-50"
+                            }`}
+                            style={newAnswers[q.id]?.option !== oIdx
+                              ? { borderColor: "var(--border)", color: "var(--text-primary)" }
+                              : { color: "#00629B" }}
+                          >
+                            <input
+                              type="radio"
+                              name={`q-${q.id}`}
+                              checked={newAnswers[q.id]?.option === oIdx}
+                              onChange={() =>
+                                setNewAnswers(prev => ({
+                                  ...prev,
+                                  [q.id]: { ...prev[q.id], option: oIdx },
+                                }))
+                              }
+                              className="accent-[#00629B] w-4 h-4"
+                            />
+                            <span className="text-sm">
+                              {String.fromCharCode(65 + oIdx)}. {opt}
+                            </span>
                           </label>
                         ))}
                       </div>
                     ) : q.type === "coding" ? (
-                      <textarea rows={10} value={newAnswers[q.id]?.text || ""}
-                        onChange={e => setNewAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                      <textarea
+                        rows={10}
+                        value={newAnswers[q.id]?.text || ""}
+                        onChange={e =>
+                          setNewAnswers(prev => ({
+                            ...prev,
+                            [q.id]: { ...prev[q.id], text: e.target.value },
+                          }))
+                        }
                         className="w-full rounded-lg p-4 font-mono text-sm focus:outline-none"
-                        style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-                        placeholder="Write your code here..." />
+                        style={{
+                          background: "var(--bg-secondary)",
+                          border: "1px solid var(--border)",
+                          color: "var(--text-primary)",
+                        }}
+                        placeholder="Write your code here..."
+                      />
                     ) : (
-                      <textarea rows={5} value={newAnswers[q.id]?.text || ""}
-                        onChange={e => setNewAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
-                        className="input-field resize-none text-sm" placeholder="Type your answer here..." />
+                      <textarea
+                        rows={5}
+                        value={newAnswers[q.id]?.text || ""}
+                        onChange={e =>
+                          setNewAnswers(prev => ({
+                            ...prev,
+                            [q.id]: { ...prev[q.id], text: e.target.value },
+                          }))
+                        }
+                        className="input-field resize-none text-sm"
+                        placeholder="Type your answer here..."
+                      />
                     )}
                   </div>
                 );
               })}
             </div>
 
-            {/* Submit button — only if there are unanswered questions */}
             {unansweredCount > 0 && (
               <div className="flex justify-end pb-8">
-                <button onClick={submitNewAnswers} disabled={submitting} className="btn-primary px-8 py-3 text-lg flex items-center gap-2">
-                  {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</> : <><Send className="w-5 h-5" /> Submit ({unansweredCount})</>}
+                <button
+                  onClick={submitNewAnswers}
+                  disabled={submitting}
+                  className="btn-primary px-8 py-3 text-lg flex items-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" /> Submit ({unansweredCount})
+                    </>
+                  )}
                 </button>
               </div>
             )}
@@ -289,21 +464,31 @@ export default function MemberTaskPage() {
     );
   }
 
-  // ── Events List View ──
+  // ── Events List ──
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
       <div>
-        <h1 className="text-4xl font-heading tracking-wide mb-2" style={{ color: "var(--text-primary)" }}>My Tasks</h1>
-        <p style={{ color: "var(--text-secondary)" }}>Your booked events with available tasks.</p>
+        <h1 className="text-4xl font-heading tracking-wide mb-2" style={{ color: "var(--text-primary)" }}>
+          My Tasks
+        </h1>
+        <p style={{ color: "var(--text-secondary)" }}>
+          Your booked events with available tasks.
+        </p>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48"><Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--accent-primary)" }} /></div>
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--accent-primary)" }} />
+        </div>
       ) : bookedEvents.length === 0 ? (
         <div className="glass-card p-12 text-center border border-dashed" style={{ borderColor: "var(--border)" }}>
           <ClipboardList className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--text-muted)" }} />
-          <p className="font-medium" style={{ color: "var(--text-secondary)" }}>No booked events.</p>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>Book events first to see tasks here.</p>
+          <p className="font-medium" style={{ color: "var(--text-secondary)" }}>
+            No booked events.
+          </p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+            Book events first to see tasks here.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -312,27 +497,69 @@ export default function MemberTaskPage() {
             const hasApproved = eventTasks.length > 0;
             const firstTask = eventTasks[0];
             const sub = firstTask?.submission;
-            const statusLabel = !hasApproved ? "No Tasks Yet" : sub?.completed ? (sub.review_status === "reviewed" ? "Reviewed" : "Submitted") : "Start Task";
-            const statusColor = !hasApproved ? "bg-gray-100 text-gray-500" : sub?.completed ? (sub.review_status === "reviewed" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700") : "bg-amber-100 text-amber-700";
+
+            const statusLabel = !hasApproved
+              ? "No Tasks Yet"
+              : sub?.completed
+                ? sub.review_status === "reviewed" ? "Reviewed" : "Submitted"
+                : "Start Task";
+
+            const statusColor = !hasApproved
+              ? "bg-gray-100 text-gray-500"
+              : sub?.completed
+                ? sub.review_status === "reviewed"
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-green-100 text-green-700"
+                : "bg-amber-100 text-amber-700";
 
             return (
-              <button key={event.id} onClick={() => openEvent(event)} disabled={!hasApproved}
-                className={`w-full text-left glass-card p-5 transition-all border group ${hasApproved ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
-                style={{ borderColor: "var(--border)" }}>
+              <button
+                key={event.id}
+                onClick={() => openEvent(event)}
+                disabled={!hasApproved}
+                className={`w-full text-left glass-card p-5 transition-all border group ${
+                  hasApproved ? "cursor-pointer" : "opacity-60 cursor-not-allowed"
+                }`}
+                style={{ borderColor: "var(--border)" }}
+              >
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--bg-secondary)", color: "var(--accent-primary)" }}>
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "var(--bg-secondary)", color: "var(--accent-primary)" }}
+                  >
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>{event.name}</h3>
-                      {event.society?.abbreviation && <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>({event.society.abbreviation})</span>}
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${statusColor}`}>{statusLabel}</span>
+                      <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
+                        {event.name}
+                      </h3>
+                      {event.society?.abbreviation && (
+                        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                          ({event.society.abbreviation})
+                        </span>
+                      )}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${statusColor}`}>
+                        {statusLabel}
+                      </span>
                     </div>
-                    {event.description && <p className="text-sm mt-1 truncate" style={{ color: "var(--text-muted)" }}>{event.description}</p>}
+                    {event.description && (
+                      <p className="text-sm mt-1 truncate" style={{ color: "var(--text-muted)" }}>
+                        {event.description}
+                      </p>
+                    )}
                     <div className="flex items-center gap-3 mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                      {event.date && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(event.date).toLocaleDateString()}</span>}
-                      {hasApproved && <span>{eventTasks.length} task{eventTasks.length !== 1 ? "s" : ""}</span>}
+                      {event.date && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {new Date(event.date).toLocaleDateString()}
+                        </span>
+                      )}
+                      {hasApproved && (
+                        <span>
+                          {eventTasks.length} task{eventTasks.length !== 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
