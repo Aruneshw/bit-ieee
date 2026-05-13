@@ -80,24 +80,41 @@ export default function MemberTaskPage() {
     const task = eventTasks[0];
     setTaskId(task.id);
 
+    // Load all approved questions
+    const { data: qs } = await supabase.from("task_questions").select("*")
+      .eq("task_id", task.id).eq("status", "approved").order("sort_order");
+    setQuestions((qs || []) as TaskQuestion[]);
+
+    // Check existing submission
     const { data: sub } = await supabase.from("task_submissions")
       .select("*, submission_answers(*, question:task_questions(*))")
       .eq("task_id", task.id).eq("user_id", userId).single();
 
     if (sub?.completed) {
+      const answeredCount = (sub.submission_answers || []).length;
+      const totalApproved = (qs || []).length;
+
+      // If new questions were added after submission, let member re-answer
+      if (totalApproved > answeredCount) {
+        toast.info(`${totalApproved - answeredCount} new question(s) added! Please re-submit.`);
+        // Delete old submission so they can start fresh
+        await supabase.from("submission_answers").delete().eq("submission_id", sub.id);
+        await supabase.from("task_submissions").delete().eq("id", sub.id);
+        const init: Record<string, { text: string; option: number | null }> = {};
+        (qs || []).forEach((q: any) => { init[q.id] = { text: "", option: null }; });
+        setAnswers(init);
+        setView("questions");
+        return;
+      }
+
+      // Otherwise show results
       setExistingSub(sub);
       setReviewAnswers((sub.submission_answers || []) as SubmissionAnswer[]);
-      const { data: qs } = await supabase.from("task_questions").select("*")
-        .eq("task_id", task.id).eq("status", "approved").order("sort_order");
-      setQuestions((qs || []) as TaskQuestion[]);
       setView("result");
       return;
     }
 
-    const { data: qs } = await supabase.from("task_questions").select("*")
-      .eq("task_id", task.id).eq("status", "approved").order("sort_order");
-    setQuestions((qs || []) as TaskQuestion[]);
-
+    // No submission yet — show questions
     const init: Record<string, { text: string; option: number | null }> = {};
     (qs || []).forEach((q: any) => { init[q.id] = { text: "", option: null }; });
     setAnswers(init);
