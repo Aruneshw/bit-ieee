@@ -41,27 +41,7 @@
     --radius-badge: 999px;
   }
 
-  [data-theme="dark"] {
-    --bg-primary: #001a2c; /* Deep navy base */
-    --bg-secondary: #002640;
-    --bg-card: rgba(0, 98, 155, 0.15); /* Tinted with IEEE Blue */
-    --bg-sidebar: #001320;
-    --border: rgba(0, 98, 155, 0.4);
-    --text-primary: #ffffff;
-    --text-secondary: #cbd5e0;
-    --text-muted: #718096;
-    --accent-primary: #00629B; /* Pantone 3015 C as accent */
-    --accent-secondary: #004d7a;
-    --accent-gold: #fbbf24;
-    --success: #22c55e;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --shadow: rgba(0, 0, 0, 0.5);
-    --radius-card: 12px;
-    --radius-button: 8px;
-    --radius-input: 8px;
-    --radius-badge: 999px;
-  }
+
 
   html,
   body {

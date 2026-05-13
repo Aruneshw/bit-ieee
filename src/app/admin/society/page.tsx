@@ -97,17 +97,17 @@ export default function AdminSocietyPage() {
                   <Users className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">{society.abbreviation || society.name}</h3>
-                  <p className="text-sm text-gray-400">{society.name}</p>
+                  <h3 className="text-lg font-bold text-gray-900">{society.abbreviation || society.name}</h3>
+                  <p className="text-sm text-gray-600">{society.name}</p>
                 </div>
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm text-gray-400">Members</p>
-                  <p className="text-lg font-bold">{society.total_members}</p>
+                  <p className="text-sm text-gray-600">Members</p>
+                  <p className="text-lg font-bold text-gray-900">{society.total_members}</p>
                 </div>
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm text-gray-400">Dept</p>
+                  <p className="text-sm text-gray-600">Dept</p>
                   <p className="text-lg font-bold text-[#00bfff]">{society.department || "—"}</p>
                 </div>
                 {expanded === society.id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
@@ -135,9 +135,9 @@ export default function AdminSocietyPage() {
                         <tbody>
                           {society.users.map(u => (
                             <tr key={u.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                              <td className="py-2.5 px-3 font-medium text-white">{u.name || u.email}</td>
-                              <td className="py-2.5 px-3 text-gray-400 capitalize">{u.role.replace("_", " ")}</td>
-                              <td className="py-2.5 px-3 text-gray-400">{u.primary_skills || "—"}</td>
+                              <td className="py-2.5 px-3 font-medium text-gray-900">{u.name || u.email}</td>
+                              <td className="py-2.5 px-3 text-gray-600 capitalize">{u.role.replace("_", " ")}</td>
+                              <td className="py-2.5 px-3 text-gray-600">{u.primary_skills || "—"}</td>
                               <td className="py-2.5 px-3 text-right font-bold text-[#00bfff]">{u.activity_points}</td>
                             </tr>
                           ))}
@@ -159,8 +159,8 @@ export default function AdminSocietyPage() {
                       {society.events.map(e => (
                         <div key={e.id} className="flex items-center justify-between py-2 px-3 bg-white/[0.02] rounded-lg">
                           <div>
-                            <p className="font-medium text-white text-sm">{e.name}</p>
-                            <p className="text-xs text-gray-500">{e.event_type} • {e.date ? new Date(e.date).toLocaleDateString() : "TBD"}</p>
+                            <p className="font-medium text-gray-900 text-sm">{e.name}</p>
+                            <p className="text-xs text-gray-600">{e.event_type} • {e.date ? new Date(e.date).toLocaleDateString() : "TBD"}</p>
                           </div>
                           <span className={`text-xs font-semibold px-2 py-1 rounded-md ${
                             e.status === "approved" ? "bg-green-500/20 text-green-400" :

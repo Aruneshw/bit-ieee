@@ -344,7 +344,7 @@ export default function MemberTaskPage() {
                           </span>
                         )}
                       </div>
-                      <p className="font-medium" style={{ color: "var(--text-primary)" }}>{q.text}</p>
+                      <p className="font-medium whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>{q.text}</p>
                       <div className="p-3 rounded-lg" style={{ background: "var(--bg-secondary)" }}>
                         <p className="text-sm font-mono whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
                           {existing.answer_text
@@ -379,7 +379,7 @@ export default function MemberTaskPage() {
                         {q.points} pts
                       </span>
                     </div>
-                    <p className="font-medium" style={{ color: "var(--text-primary)" }}>{q.text}</p>
+                    <p className="font-medium whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>{q.text}</p>
 
                     {q.type === "mcq" && q.options && Array.isArray(q.options) ? (
                       <div className="space-y-2">

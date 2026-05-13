@@ -313,22 +313,22 @@ function BulkUploadV2({ societies }: { societies: Society[] }) {
             <table className="w-full text-sm">
               <thead className="bg-white/[0.03] border-b border-white/5">
                 <tr>
-                  <th className="text-left py-3 px-4 text-gray-400">Full Name</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Roll</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Email</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Role</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Society</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Status</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Full Name</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Roll</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Email</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Role</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Society</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {rows.slice(0, 200).map((r) => (
                   <tr key={r.idx} className={r.status === "error" ? "bg-red-500/5" : ""}>
-                    <td className="py-2.5 px-4 text-white">{r.parsed?.full_name || "—"}</td>
-                    <td className="py-2.5 px-4 text-gray-300">{r.parsed?.roll_number || "—"}</td>
-                    <td className="py-2.5 px-4 text-gray-300">{r.parsed?.email || "—"}</td>
-                    <td className="py-2.5 px-4 text-gray-300">{r.parsed?.role || "—"}</td>
-                    <td className="py-2.5 px-4 text-gray-300">{r.parsed?.society || "—"}</td>
+                    <td className="py-2.5 px-4 text-gray-900">{r.parsed?.full_name || "—"}</td>
+                    <td className="py-2.5 px-4 text-gray-700">{r.parsed?.roll_number || "—"}</td>
+                    <td className="py-2.5 px-4 text-gray-700">{r.parsed?.email || "—"}</td>
+                    <td className="py-2.5 px-4 text-gray-700">{r.parsed?.role || "—"}</td>
+                    <td className="py-2.5 px-4 text-gray-700">{r.parsed?.society || "—"}</td>
                     <td className="py-2.5 px-4">
                       {r.status === "valid" ? (
                         <span className="text-green-400 font-semibold">✅ Valid</span>
@@ -520,20 +520,20 @@ function RoleManagementV2({ supabase }: { supabase: any }) {
             <table className="w-full text-sm">
               <thead className="bg-white/[0.03] border-b border-white/5">
                 <tr>
-                  <th className="text-left py-3 px-4 text-gray-400">Name</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Roll</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Email</th>
-                  <th className="text-left py-3 px-4 text-gray-400">Current Role</th>
-                  <th className="text-right py-3 px-4 text-gray-400">Actions</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Name</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Roll</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Email</th>
+                  <th className="text-left py-3 px-4 text-gray-600">Current Role</th>
+                  <th className="text-right py-3 px-4 text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {rows.map((u) => (
                   <tr key={u.id}>
-                    <td className="py-3 px-4 text-white font-medium">{u.full_name || u.name || "—"}</td>
-                    <td className="py-3 px-4 text-gray-300">{u.roll_number || "—"}</td>
-                    <td className="py-3 px-4 text-gray-300">{u.email}</td>
-                    <td className="py-3 px-4 text-gray-300">{u.role}</td>
+                    <td className="py-3 px-4 text-gray-900 font-medium">{u.full_name || u.name || "—"}</td>
+                    <td className="py-3 px-4 text-gray-700">{u.roll_number || "—"}</td>
+                    <td className="py-3 px-4 text-gray-700">{u.email}</td>
+                    <td className="py-3 px-4 text-gray-700">{u.role}</td>
                     <td className="py-3 px-4 text-right">
                       <select
                         className="input-field !w-40 inline-block"

@@ -88,11 +88,11 @@ function ActivitySheet() {
         <table className="w-full text-sm">
           <thead className="bg-white/[0.03] border-b border-white/5">
             <tr>
-              <th className="text-left py-3 px-4 text-gray-400 font-medium">#</th>
-              <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
-              <th className="text-left py-3 px-4 text-gray-400 font-medium">Gmail</th>
-              <th className="text-left py-3 px-4 text-gray-400 font-medium">Society</th>
-              <th className="text-right py-3 px-4 text-gray-400 font-medium">Total Points</th>
+              <th className="text-left py-3 px-4 text-gray-600 font-medium">#</th>
+              <th className="text-left py-3 px-4 text-gray-600 font-medium">Name</th>
+              <th className="text-left py-3 px-4 text-gray-600 font-medium">Gmail</th>
+              <th className="text-left py-3 px-4 text-gray-600 font-medium">Society</th>
+              <th className="text-right py-3 px-4 text-gray-600 font-medium">Total Points</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -102,10 +102,10 @@ function ActivitySheet() {
               ))
             ) : filtered.map((u, i) => (
               <tr key={i} className="hover:bg-white/[0.02]">
-                <td className="py-3 px-4 text-gray-500">{i + 1}</td>
-                <td className="py-3 px-4 text-white font-medium">{u.name || "—"}</td>
-                <td className="py-3 px-4 text-gray-400">{u.email}</td>
-                <td className="py-3 px-4 text-gray-400">{u.society?.abbreviation || "—"}</td>
+                <td className="py-3 px-4 text-gray-600">{i + 1}</td>
+                <td className="py-3 px-4 text-gray-900 font-medium">{u.name || "—"}</td>
+                <td className="py-3 px-4 text-gray-700">{u.email}</td>
+                <td className="py-3 px-4 text-gray-700">{u.society?.abbreviation || "—"}</td>
                 <td className="py-3 px-4 text-right font-bold text-[#00bfff]">{u.activity_points}</td>
               </tr>
             ))}
@@ -172,23 +172,23 @@ function PerformanceSheet() {
           <table className="w-full text-sm">
             <thead className="bg-white/[0.03] border-b border-white/5">
               <tr>
-                <th className="text-left py-3 px-4 text-gray-400">Rank</th>
-                <th className="text-left py-3 px-4 text-gray-400">Name</th>
-                <th className="text-left py-3 px-4 text-gray-400">Society</th>
-                <th className="text-left py-3 px-4 text-gray-400">Skills</th>
-                <th className="text-right py-3 px-4 text-gray-400">Events</th>
-                <th className="text-right py-3 px-4 text-gray-400">Points</th>
-                <th className="text-right py-3 px-4 text-gray-400">Score</th>
+                <th className="text-left py-3 px-4 text-gray-600">Rank</th>
+                <th className="text-left py-3 px-4 text-gray-600">Name</th>
+                <th className="text-left py-3 px-4 text-gray-600">Society</th>
+                <th className="text-left py-3 px-4 text-gray-600">Skills</th>
+                <th className="text-right py-3 px-4 text-gray-600">Events</th>
+                <th className="text-right py-3 px-4 text-gray-600">Points</th>
+                <th className="text-right py-3 px-4 text-gray-600">Score</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {leaders.map((l, i) => (
                 <tr key={l.id} className="hover:bg-white/[0.02]">
-                  <td className="py-3 px-4 text-gray-500 font-bold">{i + 1}</td>
-                  <td className="py-3 px-4 text-white font-medium">{l.name || l.email}</td>
-                  <td className="py-3 px-4 text-gray-400">{l.society?.abbreviation || "—"}</td>
-                  <td className="py-3 px-4 text-gray-400 max-w-[200px] truncate">{l.primary_skills || "—"}</td>
-                  <td className="py-3 px-4 text-right text-gray-400">{l.events_conducted}</td>
+                  <td className="py-3 px-4 text-gray-600 font-bold">{i + 1}</td>
+                  <td className="py-3 px-4 text-gray-900 font-medium">{l.name || l.email}</td>
+                  <td className="py-3 px-4 text-gray-700">{l.society?.abbreviation || "—"}</td>
+                  <td className="py-3 px-4 text-gray-700 max-w-[200px] truncate">{l.primary_skills || "—"}</td>
+                  <td className="py-3 px-4 text-right text-gray-700">{l.events_conducted}</td>
                   <td className="py-3 px-4 text-right text-[#00bfff]">{l.activity_points}</td>
                   <td className="py-3 px-4 text-right font-bold text-green-400">{l.score}</td>
                 </tr>
@@ -238,21 +238,21 @@ function AttendanceSheet() {
         <table className="w-full text-sm">
           <thead className="bg-white/[0.03] border-b border-white/5">
             <tr>
-              <th className="text-left py-3 px-4 text-gray-400">Name</th>
-              <th className="text-left py-3 px-4 text-gray-400">Gmail</th>
-              <th className="text-left py-3 px-4 text-gray-400">Society</th>
-              <th className="text-left py-3 px-4 text-gray-400">Event</th>
-              <th className="text-right py-3 px-4 text-gray-400">Score</th>
-              <th className="text-center py-3 px-4 text-gray-400">Status</th>
+              <th className="text-left py-3 px-4 text-gray-600">Name</th>
+              <th className="text-left py-3 px-4 text-gray-600">Gmail</th>
+              <th className="text-left py-3 px-4 text-gray-600">Society</th>
+              <th className="text-left py-3 px-4 text-gray-600">Event</th>
+              <th className="text-right py-3 px-4 text-gray-600">Score</th>
+              <th className="text-center py-3 px-4 text-gray-600">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {filtered.map((d, i) => (
               <tr key={i} className="hover:bg-white/[0.02]">
-                <td className="py-3 px-4 text-white font-medium">{d.user?.name || "—"}</td>
-                <td className="py-3 px-4 text-gray-400">{d.user?.email || "—"}</td>
-                <td className="py-3 px-4 text-gray-400">{d.user?.society?.abbreviation || "—"}</td>
-                <td className="py-3 px-4 text-gray-400">{d.task?.event?.name || "—"}</td>
+                <td className="py-3 px-4 text-gray-900 font-medium">{d.user?.name || "—"}</td>
+                <td className="py-3 px-4 text-gray-700">{d.user?.email || "—"}</td>
+                <td className="py-3 px-4 text-gray-700">{d.user?.society?.abbreviation || "—"}</td>
+                <td className="py-3 px-4 text-gray-700">{d.task?.event?.name || "—"}</td>
                 <td className="py-3 px-4 text-right font-bold text-[#00bfff]">{d.score}</td>
                 <td className="py-3 px-4 text-center">
                   <span className={`text-xs font-bold px-2 py-0.5 rounded ${d.completed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
