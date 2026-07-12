@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { KeyRound, ClipboardList, FileCheck, Upload, UserCheck } from "lucide-react";
+import { KeyRound, ClipboardList, FileCheck, Upload, UserCheck, Cpu, Zap, Award, ExternalLink, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function LeadershipTaskPage() {
@@ -19,6 +19,7 @@ export default function LeadershipTaskPage() {
         {[
           { id: "otp", icon: <KeyRound className="w-4 h-4" />, label: "OTP Manager" },
           { id: "manager", icon: <ClipboardList className="w-4 h-4" />, label: "Task Manager" },
+          { id: "circuit", icon: <Cpu className="w-4 h-4" />, label: "Circuit Challenge" },
           { id: "verify", icon: <FileCheck className="w-4 h-4" />, label: "My Task" },
           { id: "attend", icon: <UserCheck className="w-4 h-4" />, label: "Task Attend" },
         ].map(t => (
@@ -35,6 +36,7 @@ export default function LeadershipTaskPage() {
       <div className="mt-6 glass-card p-6 max-w-3xl">
         {activeTab === "otp" && <OTPManager />}
         {activeTab === "manager" && <TaskManager />}
+        {activeTab === "circuit" && <CircuitChallenge />}
         {activeTab === "verify" && <TaskVerify />}
         {activeTab === "attend" && <TaskAttend />}
       </div>
@@ -494,6 +496,387 @@ function TaskAttend() {
           {loading ? "Verifying..." : "Mark Attendance"}
         </button>
       </form>
+    </div>
+  );
+}
+
+// ─── Circuit Challenge Tab ────────────────────────────────────────────────
+
+interface CircuitResult {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  aiScore: number;
+  aiFeedback: string | null;
+  graded: boolean;
+  submittedAt: string;
+}
+
+function CircuitChallenge() {
+  const supabase = createClient();
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [grading, setGrading] = useState(false);
+  const [ending, setEnding] = useState(false);
+
+  // Form fields
+  const [tinkercadUrl, setTinkercadUrl] = useState("");
+  const [questionText, setQuestionText] = useState("");
+  const [referenceAnswer, setReferenceAnswer] = useState("");
+
+  // Active session
+  const [activeSession, setActiveSession] = useState<{
+    id: string;
+    questionText: string;
+    tinkercadUrl: string;
+    active: boolean;
+    expiresAt: string;
+  } | null>(null);
+  const [results, setResults] = useState<CircuitResult[]>([]);
+  const [totalSubmissions, setTotalSubmissions] = useState(0);
+  const [gradedCount, setGradedCount] = useState(0);
+
+  // Fetch events
+  useEffect(() => {
+    async function fetchEvents() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("events")
+        .select("id, name")
+        .eq("organiser_id", user.id)
+        .eq("status", "approved");
+      setEvents(data || []);
+      setLoading(false);
+    }
+    fetchEvents();
+  }, []);
+
+  // Create circuit challenge
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedEventId || !tinkercadUrl || !questionText) return;
+    setCreating(true);
+
+    try {
+      const res = await fetch("/api/circuit/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: selectedEventId,
+          tinkercadUrl,
+          questionText,
+          referenceAnswer: referenceAnswer || null,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+
+      toast.success(`Circuit challenge started! Session: ${json.sessionId.slice(0, 8)}...`);
+      setActiveSession({
+        id: json.sessionId,
+        questionText,
+        tinkercadUrl,
+        active: true,
+        expiresAt: json.expiresAt,
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start circuit challenge");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  // Poll results
+  useEffect(() => {
+    if (!activeSession) return;
+
+    const fetchResults = async () => {
+      try {
+        const res = await fetch(`/api/circuit/results?sessionId=${activeSession.id}`);
+        const json = await res.json();
+        if (json.success) {
+          setResults(json.results || []);
+          setTotalSubmissions(json.totalSubmissions || 0);
+          setGradedCount(json.gradedCount || 0);
+        }
+      } catch { /* silent */ }
+    };
+
+    fetchResults();
+    const interval = setInterval(fetchResults, 5000);
+    return () => clearInterval(interval);
+  }, [activeSession]);
+
+  // Grade all submissions
+  async function handleGrade() {
+    if (!activeSession) return;
+    setGrading(true);
+    try {
+      const res = await fetch("/api/circuit/grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: activeSession.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(`Graded ${json.gradedCount} submissions!`);
+    } catch (err: any) {
+      toast.error(err.message || "Grading failed");
+    } finally {
+      setGrading(false);
+    }
+  }
+
+  // End session & cleanup
+  async function handleEndSession() {
+    if (!activeSession) return;
+    if (!confirm("End this session? Sandbox data will be permanently deleted. Final scores are preserved.")) return;
+    setEnding(true);
+    try {
+      const res = await fetch("/api/circuit/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: activeSession.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success("Session ended. Sandbox purged.");
+      setActiveSession(null);
+      setResults([]);
+    } catch (err: any) {
+      toast.error(err.message || "Cleanup failed");
+    } finally {
+      setEnding(false);
+    }
+  }
+
+  // Get embed URL
+  function getEmbedUrl(url: string): string {
+    if (url.includes("/embed/")) return url;
+    const match = url.match(/tinkercad\.com\/things\/([a-zA-Z0-9_-]+)/);
+    if (match) return `https://www.tinkercad.com/embed/${match[1]}`;
+    return url;
+  }
+
+  if (loading) return <div className="h-20 animate-pulse bg-white/5 rounded-xl" />;
+
+  // ─── Active Session View ───────────────────────────────────────────────
+  if (activeSession) {
+    return (
+      <div className="space-y-6 animate-slide-up">
+        {/* Session Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+            <h3 className="text-xl font-medium">Live Circuit Session</h3>
+          </div>
+          <span className="text-[10px] uppercase tracking-widest text-green-400 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
+            Active
+          </span>
+        </div>
+
+        {/* Student Link */}
+        <div className="p-4 bg-[#00bfff]/5 border border-[#00bfff]/20 rounded-xl">
+          <p className="text-xs font-bold text-[#00bfff] uppercase tracking-widest mb-2">Share This Link With Students</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs text-gray-300 bg-black/20 px-3 py-2 rounded-lg overflow-x-auto whitespace-nowrap">
+              {typeof window !== "undefined" ? `${window.location.origin}/quiz/circuit?session=${activeSession.id}` : ""}
+            </code>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/quiz/circuit?session=${activeSession.id}`);
+                toast.success("Link copied!");
+              }}
+              className="btn-secondary text-xs px-3 py-2"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+
+        {/* Preview */}
+        {tinkercadUrl && (
+          <div className="rounded-xl overflow-hidden border border-white/10">
+            <iframe
+              src={getEmbedUrl(activeSession.tinkercadUrl)}
+              width="100%"
+              height="300"
+              className="border-0"
+              title="TinkerCAD Preview"
+            />
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-4 bg-white/[0.03] border border-white/5 rounded-xl text-center">
+            <p className="text-2xl font-bold text-white">{totalSubmissions}</p>
+            <p className="text-[10px] text-gray-500 uppercase">Submitted</p>
+          </div>
+          <div className="p-4 bg-white/[0.03] border border-white/5 rounded-xl text-center">
+            <p className="text-2xl font-bold text-[#00bfff]">{gradedCount}</p>
+            <p className="text-[10px] text-gray-500 uppercase">Graded</p>
+          </div>
+          <div className="p-4 bg-white/[0.03] border border-white/5 rounded-xl text-center">
+            <p className="text-2xl font-bold text-green-400">
+              {results.length > 0 ? Math.round(results.reduce((s, r) => s + r.aiScore, 0) / results.length) : "—"}
+            </p>
+            <p className="text-[10px] text-gray-500 uppercase">Avg Score</p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleGrade}
+            disabled={grading || totalSubmissions === 0}
+            className="btn-primary flex-1 py-3 flex items-center justify-center gap-2"
+          >
+            {grading ? <><Loader2 className="w-4 h-4 animate-spin" /> Grading...</> : <><Zap className="w-4 h-4" /> Grade All</>}
+          </button>
+          <button
+            onClick={handleEndSession}
+            disabled={ending}
+            className="px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm font-medium hover:bg-red-500/20 transition flex items-center gap-2"
+          >
+            {ending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} End
+          </button>
+        </div>
+
+        {/* Results Table */}
+        {results.length > 0 && (
+          <div className="overflow-x-auto border border-white/5 rounded-xl">
+            <table className="w-full text-sm">
+              <thead className="bg-white/[0.03] border-b border-white/5">
+                <tr>
+                  <th className="text-left py-3 px-4 text-gray-400">Student</th>
+                  <th className="text-center py-3 px-4 text-gray-400">Status</th>
+                  <th className="text-right py-3 px-4 text-gray-400">Score</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {results.map(r => (
+                  <tr key={r.id} className="hover:bg-white/[0.02]">
+                    <td className="py-3 px-4">
+                      <p className="text-white font-medium">{r.userName}</p>
+                      <p className="text-xs text-gray-500">{r.userEmail}</p>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${r.graded ? "bg-green-500/20 text-green-400" : "bg-amber-500/20 text-amber-400"}`}>
+                        {r.graded ? "Graded" : "Pending"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-[#00bfff]">{r.graded ? r.aiScore : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Create New Challenge ──────────────────────────────────────────────
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-medium flex items-center gap-2">
+          <Cpu className="w-5 h-5 text-[#00bfff]" /> Create Circuit Challenge
+        </h3>
+        <span className="text-[10px] uppercase tracking-widest text-gray-500 bg-white/5 px-2 py-1 rounded">
+          TinkerCAD
+        </span>
+      </div>
+
+      {events.length === 0 ? (
+        <div className="p-8 text-center glass-card border-amber-500/20">
+          <p className="text-amber-400">No approved events found.</p>
+          <p className="text-xs text-gray-500 mt-2">You need at least one approved event to create a circuit challenge.</p>
+        </div>
+      ) : (
+        <form onSubmit={handleCreate} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-500 font-bold uppercase ml-1">Select Event</label>
+            <select
+              className="input-field"
+              value={selectedEventId}
+              onChange={e => setSelectedEventId(e.target.value)}
+              required
+            >
+              <option value="">Choose an event...</option>
+              {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-500 font-bold uppercase ml-1 flex items-center gap-2">
+              <ExternalLink className="w-3 h-3" /> TinkerCAD Embed URL
+            </label>
+            <input
+              className="input-field"
+              placeholder="https://www.tinkercad.com/things/abc123..."
+              value={tinkercadUrl}
+              onChange={e => setTinkercadUrl(e.target.value)}
+              required
+            />
+            <p className="text-[10px] text-gray-600 ml-1">Paste the public TinkerCAD circuit link or embed URL</p>
+          </div>
+
+          {/* Preview */}
+          {tinkercadUrl.includes("tinkercad.com") && (
+            <div className="rounded-xl overflow-hidden border border-white/10 animate-slide-up">
+              <iframe
+                src={getEmbedUrl(tinkercadUrl)}
+                width="100%"
+                height="280"
+                className="border-0"
+                title="TinkerCAD Preview"
+              />
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-500 font-bold uppercase ml-1">Question / Instructions</label>
+            <textarea
+              className="input-field min-h-[100px] resize-y"
+              placeholder="Describe what students need to build or analyze in the circuit..."
+              value={questionText}
+              onChange={e => setQuestionText(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-500 font-bold uppercase ml-1">
+              Expected Answer <span className="text-gray-700">(for AI grading)</span>
+            </label>
+            <textarea
+              className="input-field min-h-[80px] resize-y"
+              placeholder="Describe the correct circuit configuration or expected output values..."
+              value={referenceAnswer}
+              onChange={e => setReferenceAnswer(e.target.value)}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={creating || !selectedEventId || !tinkercadUrl || !questionText}
+            className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-2"
+          >
+            {creating ? (
+              <><Loader2 className="w-5 h-5 animate-spin" /> Creating...</>
+            ) : (
+              <><Zap className="w-5 h-5" /> Start Circuit Challenge</>
+            )}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

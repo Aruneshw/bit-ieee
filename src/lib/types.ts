@@ -199,6 +199,34 @@ export interface ResumeItem {
   link?: string
 }
 
+// ─── Circuit Challenge (TinkerCAD Sandbox) ─────────────────────────────────
+
+export interface CircuitSession {
+  id: string
+  task_id: string
+  event_id: string
+  host_id: string
+  tinkercad_url: string
+  question_text: string
+  reference_answer: string | null
+  reference_image_url: string | null
+  active: boolean
+  expires_at: string
+  created_at: string
+}
+
+export interface CircuitSandboxEntry {
+  id: string
+  session_id: string
+  user_id: string
+  screenshot_url: string
+  ai_score: number
+  ai_feedback: string | null
+  graded: boolean
+  submitted_at: string
+  user?: UserProfile
+}
+
 // Constants
 export const DEPARTMENTS = [
   'CSE', 'AIML', 'ECE', 'EEE', 'Mechanical',
