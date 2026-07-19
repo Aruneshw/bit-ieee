@@ -153,6 +153,7 @@ export default function AdminTaskPanel() {
     correct_answer: string | null;
     points: number;
     imageFile: File | null;
+    optionFiles?: (File | null)[];
   }) {
     if (!task) return;
     setActionLoading(true);
@@ -175,11 +176,27 @@ export default function AdminTaskPanel() {
         image_url = publicUrl;
       }
 
+      const finalOptions = [...q.options];
+      if (q.optionFiles && q.optionFiles.length > 0) {
+        for (let i = 0; i < q.optionFiles.length; i++) {
+          const file = q.optionFiles[i];
+          if (file) {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `admin-opt-${Date.now()}-${i}.${fileExt}`;
+            const filePath = `task-options/${fileName}`;
+            const { error: uploadError } = await supabase.storage.from('media').upload(filePath, file);
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
+            finalOptions[i] = publicUrl;
+          }
+        }
+      }
+
       const { error } = await supabase.from("task_questions").insert({
         task_id: task.id,
         type: q.type,
         text: q.text.trim(),
-        options: q.options.length > 0 ? q.options : null,
+        options: finalOptions.length > 0 ? finalOptions : null,
         correct_answer: q.correct_answer,
         points: Math.max(1, Math.min(100, q.points)),
         sort_order: questions.length,

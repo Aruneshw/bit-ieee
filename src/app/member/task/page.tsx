@@ -461,9 +461,16 @@ export default function MemberTaskPage() {
                               }
                               className="accent-[#00629B] w-4 h-4"
                             />
-                            <span className="text-sm">
-                              {String.fromCharCode(65 + oIdx)}. {opt}
-                            </span>
+                            <div className="text-sm flex items-start gap-1">
+                              <span className="font-bold shrink-0">{String.fromCharCode(65 + oIdx)}.</span>
+                              {opt.startsWith('http') ? (
+                                <div className="border rounded overflow-hidden bg-white/50 p-1 mt-0.5">
+                                  <img src={opt} alt={`Option ${String.fromCharCode(65 + oIdx)}`} className="max-h-24 object-contain rounded" />
+                                </div>
+                              ) : (
+                                <span className="break-words break-all">{opt}</span>
+                              )}
+                            </div>
                           </label>
                         ))}
                       </div>

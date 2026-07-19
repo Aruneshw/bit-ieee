@@ -5,11 +5,12 @@ import { Plus, Trash2, CheckCircle, XCircle, MessageSquare, ChevronDown, Chevron
 import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
 
 /* ── Question Form (hidden by default, toggled) ── */
-export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: string; options: string[]; correct_answer: string | null; points: number; imageFile: File | null }) => void }) {
+export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: string; options: string[]; correct_answer: string | null; points: number; imageFile: File | null; optionFiles?: (File | null)[] }) => void }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"mcq" | "coding" | "general">("mcq");
   const [text, setText] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
+  const [optionFiles, setOptionFiles] = useState<(File | null)[]>([null, null, null, null]);
   const [correct, setCorrect] = useState<number | null>(null);
   const [points, setPoints] = useState(10);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -23,6 +24,13 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
     }
   }
 
+  function handleOptionImageChange(i: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    const newFiles = [...optionFiles];
+    newFiles[i] = file;
+    setOptionFiles(newFiles);
+  }
+
   function clearImage() {
     setImageFile(null);
     setImagePreview(null);
@@ -34,12 +42,13 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
     onAdd({
       type,
       text: text.trim(),
-      options: type === "mcq" ? options.filter(Boolean) : [],
+      options: type === "mcq" ? options : [],
       correct_answer: type === "mcq" && correct !== null ? String(correct) : null,
       points,
       imageFile,
+      optionFiles: type === "mcq" ? optionFiles : [],
     });
-    setText(""); setOptions(["", "", "", ""]); setCorrect(null); setPoints(10); clearImage();
+    setText(""); setOptions(["", "", "", ""]); setOptionFiles([null, null, null, null]); setCorrect(null); setPoints(10); clearImage();
     setOpen(false);
   }
 
@@ -98,10 +107,21 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
         <div className="space-y-2">
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>Options (click radio to mark correct):</p>
           {options.map((opt, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input type="radio" name="correct" checked={correct === i} onChange={() => setCorrect(i)} className="accent-[#00629B]" />
-              <input type="text" value={opt} onChange={e => { const o = [...options]; o[i] = e.target.value; setOptions(o); }}
-                className="input-field text-sm flex-1" placeholder={`Option ${i + 1}`} />
+            <div key={i} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <input type="radio" name="correct" checked={correct === i} onChange={() => setCorrect(i)} className="accent-[#00629B]" />
+                <input type="text" value={opt} onChange={e => { const o = [...options]; o[i] = e.target.value; setOptions(o); }}
+                  className="input-field text-sm flex-1" placeholder={optionFiles[i] ? "Image attached (text will be ignored)" : `Option ${i + 1}`} disabled={!!optionFiles[i]} />
+                <label className="cursor-pointer p-1.5 rounded bg-black/5 hover:bg-black/10 transition-colors" title="Attach Image for Option">
+                  <ImageIcon className={`w-4 h-4 ${optionFiles[i] ? "text-green-600" : "text-gray-500"}`} />
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleOptionImageChange(i, e)} />
+                </label>
+                {optionFiles[i] && (
+                  <button type="button" onClick={() => { const newFiles = [...optionFiles]; newFiles[i] = null; setOptionFiles(newFiles); }} className="p-1.5 rounded hover:bg-red-50 text-red-500 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -170,7 +190,18 @@ export function QuestionCard({ q, index, onApprove, onReject, onDelete }: {
           {(q.options as string[]).map((opt: string, i: number) => (
             <div key={i} className={`text-xs px-3 py-1.5 rounded-lg border ${q.correct_answer === String(i) ? "border-green-400 bg-green-50 text-green-700" : "text-gray-500"}`}
               style={q.correct_answer !== String(i) ? { borderColor: "var(--border)" } : {}}>
-              {String.fromCharCode(65 + i)}. {opt}
+              <div className="flex items-start gap-1">
+                <span className="font-bold shrink-0">{String.fromCharCode(65 + i)}.</span>
+                {opt.startsWith('http') ? (
+                  <div className="border rounded overflow-hidden bg-white/50 p-1 mt-0.5">
+                    <a href={opt} target="_blank" rel="noopener noreferrer">
+                      <img src={opt} alt={`Option ${String.fromCharCode(65 + i)}`} className="max-h-20 object-contain rounded" />
+                    </a>
+                  </div>
+                ) : (
+                  <span className="break-words break-all">{opt}</span>
+                )}
+              </div>
             </div>
           ))}
         </div>
