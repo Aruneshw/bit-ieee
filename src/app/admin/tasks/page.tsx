@@ -244,6 +244,23 @@ export default function AdminTaskPanel() {
     }
   }
 
+  /** Toggle C compiler enabled/disabled */
+  async function toggleCCompiler(enabled: boolean) {
+    if (!task) return;
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ c_compiler_enabled: enabled })
+        .eq("id", task.id);
+      if (error) throw error;
+      toast.success(`C Compiler ${enabled ? "enabled" : "disabled"} for this event.`);
+      setTask({ ...task, c_compiler_enabled: enabled });
+    } catch (err: any) {
+      toast.error("Failed to update C Compiler setting: " + err.message);
+    }
+  }
+
+
   /** Delete task and all related data */
   async function deleteTask() {
     if (!task) return;
@@ -372,7 +389,19 @@ export default function AdminTaskPanel() {
                   {questions.filter(q => q.status === "approved").length} approved
                 </span>
               </div>
+              <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={task.c_compiler_enabled || false}
+                  onChange={(e) => toggleCCompiler(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 accent-[#00629B]"
+                />
+                <span className="text-xs font-bold text-gray-700">
+                  Enable C Compiler Editor for Coding Questions
+                </span>
+              </label>
             </div>
+
             <div className="flex items-center gap-2">
               {task.status === "draft" ? (
                 <button

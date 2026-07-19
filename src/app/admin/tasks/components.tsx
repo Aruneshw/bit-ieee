@@ -204,6 +204,13 @@ function AnswerReviewRow({ answer, question, onUpdate }: {
         <p className="text-sm whitespace-pre-wrap font-mono" style={{ color: "var(--text-primary)" }}>
           {answer.answer_text || (answer.selected_option !== null && question?.options ? `Option ${String.fromCharCode(65 + answer.selected_option)}: ${(question.options as string[])[answer.selected_option]}` : "No answer")}
         </p>
+        {answer.image_url && (
+          <div className="mt-2 border rounded-lg overflow-hidden max-w-md bg-black/5">
+            <a href={answer.image_url} target="_blank" rel="noopener noreferrer" className="block p-1 bg-white/50 hover:bg-white transition-colors">
+              <img src={answer.image_url} alt="Answer attachment proof" className="max-h-60 object-contain mx-auto rounded" />
+            </a>
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Admin remarks..."

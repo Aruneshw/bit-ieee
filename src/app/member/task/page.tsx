@@ -5,9 +5,11 @@ import { useState, useEffect, useCallback } from "react";
 import {
   ClipboardList, CheckCircle, Clock, Send, ArrowLeft,
   Loader2, MessageSquare, Calendar, Lock,
+  Image as ImageIcon, X
 } from "lucide-react";
 import { toast } from "sonner";
 import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
+import CodingQuestionEditor from "./coding-editor";
 
 /**
  * Member Task Page
@@ -25,10 +27,40 @@ export default function MemberTaskPage() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const [existingAnswers, setExistingAnswers] = useState<Record<string, SubmissionAnswer>>({});
-  const [newAnswers, setNewAnswers] = useState<Record<string, { text: string; option: number | null }>>({});
+  const [newAnswers, setNewAnswers] = useState<Record<string, { text: string; option: number | null; image_url?: string | null }>>({});
+  const [imageUploading, setImageUploading] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [submittingQId, setSubmittingQId] = useState<string | null>(null);
   const [userId, setUserId] = useState("");
+
+  const handleImageUpload = async (qId: string, file: File) => {
+    setImageUploading(prev => ({ ...prev, [qId]: true }));
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${qId}-${Date.now()}.${fileExt}`;
+      const filePath = `task-attachments/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('media')
+        .getPublicUrl(filePath);
+
+      setNewAnswers(prev => ({
+        ...prev,
+        [qId]: { ...prev[qId], image_url: publicUrl }
+      }));
+      toast.success("Image uploaded successfully!");
+    } catch (err: any) {
+      toast.error("Failed to upload image: " + err.message);
+    } finally {
+      setImageUploading(prev => ({ ...prev, [qId]: false }));
+    }
+  };
 
   /**
    * Load booked events + their task status on mount.
@@ -56,7 +88,7 @@ export default function MemberTaskPage() {
             .eq("status", "approved")
             .order("date", { ascending: false }),
           supabase.from("tasks")
-            .select("id, event_id, title, type, status")
+            .select("id, event_id, title, type, status, c_compiler_enabled")
             .in("event_id", bookedIds),
           supabase.from("task_submissions")
             .select("task_id, completed, review_status")
@@ -221,6 +253,7 @@ export default function MemberTaskPage() {
           question_id: questionId,
           answer_text: ans.text?.trim() || null,
           selected_option: ans.option ?? null,
+          image_url: ans.image_url || null,
         });
 
       if (ansErr) {
@@ -246,6 +279,7 @@ export default function MemberTaskPage() {
           question_id: questionId,
           answer_text: ans.text?.trim() || null,
           selected_option: ans.option ?? null,
+          image_url: ans.image_url || null,
           is_correct: isAutoCorrect,
           admin_remarks: null,
         } as any,
@@ -352,6 +386,13 @@ export default function MemberTaskPage() {
                               : "No answer")}
                         </p>
                       </div>
+                      {existing.image_url && (
+                        <div className="mt-2 border rounded-lg overflow-hidden max-w-md bg-black/5 p-1">
+                          <a href={existing.image_url} target="_blank" rel="noopener noreferrer" className="block hover:opacity-90">
+                            <img src={existing.image_url} alt="Attached image proof" className="max-h-48 object-contain rounded" />
+                          </a>
+                        </div>
+                      )}
                       {existing.admin_remarks && (
                         <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
                           <MessageSquare className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -413,23 +454,35 @@ export default function MemberTaskPage() {
                         ))}
                       </div>
                     ) : q.type === "coding" ? (
-                      <textarea
-                        rows={10}
-                        value={newAnswers[q.id]?.text || ""}
-                        onChange={e =>
-                          setNewAnswers(prev => ({
-                            ...prev,
-                            [q.id]: { ...prev[q.id], text: e.target.value },
-                          }))
-                        }
-                        className="w-full rounded-lg p-4 font-mono text-sm focus:outline-none"
-                        style={{
-                          background: "var(--bg-secondary)",
-                          border: "1px solid var(--border)",
-                          color: "var(--text-primary)",
-                        }}
-                        placeholder="Write your code here..."
-                      />
+                      selectedEvent.tasks?.[0]?.c_compiler_enabled ? (
+                        <CodingQuestionEditor
+                          value={newAnswers[q.id]?.text || ""}
+                          onChange={val =>
+                            setNewAnswers(prev => ({
+                              ...prev,
+                              [q.id]: { ...prev[q.id], text: val },
+                            }))
+                          }
+                        />
+                      ) : (
+                        <textarea
+                          rows={10}
+                          value={newAnswers[q.id]?.text || ""}
+                          onChange={e =>
+                            setNewAnswers(prev => ({
+                              ...prev,
+                              [q.id]: { ...prev[q.id], text: e.target.value },
+                            }))
+                          }
+                          className="w-full rounded-lg p-4 font-mono text-sm focus:outline-none"
+                          style={{
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border)",
+                            color: "var(--text-primary)",
+                          }}
+                          placeholder="Write your code here..."
+                        />
+                      )
                     ) : (
                       <textarea
                         rows={5}
@@ -443,6 +496,42 @@ export default function MemberTaskPage() {
                         className="input-field resize-none text-sm"
                         placeholder="Type your answer here..."
                       />
+                    )}
+
+                    {(q.type === "coding" || q.type === "general") && (
+                      <div className="mt-2">
+                        {newAnswers[q.id]?.image_url ? (
+                          <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
+                            <img src={newAnswers[q.id].image_url!} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setNewAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], image_url: null } }))}
+                              className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white hover:bg-black"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-gray-700 cursor-pointer w-fit p-2 rounded bg-black/5 hover:bg-black/10 transition-colors">
+                            {imageUploading[q.id] ? (
+                              <><Loader2 className="w-4 h-4 animate-spin text-[#00629B]" /> Uploading...</>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-4 h-4 text-[#00629B]" /> Attach Image Proof (Optional)
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleImageUpload(q.id, file);
+                                  }}
+                                />
+                              </>
+                            )}
+                          </label>
+                        )}
+                      </div>
                     )}
 
                     {/* Per-question submit button */}

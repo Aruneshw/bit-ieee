@@ -87,6 +87,7 @@ export interface Task {
   questions: Question[]
   created_by: string
   created_at: string
+  c_compiler_enabled?: boolean
   event?: Event
   task_questions?: TaskQuestion[]
 }
@@ -123,6 +124,7 @@ export interface SubmissionAnswer {
   reviewed_by: string | null
   reviewed_at: string | null
   created_at: string
+  image_url?: string | null
   question?: TaskQuestion
 }
 
