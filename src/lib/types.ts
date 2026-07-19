@@ -111,6 +111,7 @@ export interface TaskQuestion {
   sort_order: number
   status: 'draft' | 'approved' | 'rejected'
   created_at: string
+  image_url?: string | null
 }
 
 export interface SubmissionAnswer {

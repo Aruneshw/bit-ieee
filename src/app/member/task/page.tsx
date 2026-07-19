@@ -378,6 +378,13 @@ export default function MemberTaskPage() {
                         )}
                       </div>
                       <p className="font-medium whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>{q.text}</p>
+                      {q.image_url && (
+                        <div className="mt-2 border rounded-lg overflow-hidden max-w-md bg-black/5 p-1">
+                          <a href={q.image_url} target="_blank" rel="noopener noreferrer" className="block hover:opacity-90">
+                            <img src={q.image_url} alt="Question Attachment" className="max-h-60 object-contain rounded" />
+                          </a>
+                        </div>
+                      )}
                       <div className="p-3 rounded-lg" style={{ background: "var(--bg-secondary)" }}>
                         <p className="text-sm font-mono whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
                           {existing.answer_text
@@ -420,6 +427,13 @@ export default function MemberTaskPage() {
                       </span>
                     </div>
                     <p className="font-medium whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>{q.text}</p>
+                    {q.image_url && (
+                      <div className="mt-2 border rounded-lg overflow-hidden max-w-md bg-black/5 p-1">
+                        <a href={q.image_url} target="_blank" rel="noopener noreferrer" className="block hover:opacity-90">
+                          <img src={q.image_url} alt="Question Attachment" className="max-h-60 object-contain rounded" />
+                        </a>
+                      </div>
+                    )}
 
                     {q.type === "mcq" && q.options && Array.isArray(q.options) ? (
                       <div className="space-y-2">

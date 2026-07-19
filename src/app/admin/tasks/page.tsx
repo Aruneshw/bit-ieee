@@ -152,10 +152,29 @@ export default function AdminTaskPanel() {
     options: string[];
     correct_answer: string | null;
     points: number;
+    imageFile: File | null;
   }) {
     if (!task) return;
     setActionLoading(true);
     try {
+      let image_url = null;
+      if (q.imageFile) {
+        const fileExt = q.imageFile.name.split('.').pop();
+        const fileName = `admin-q-${Date.now()}.${fileExt}`;
+        const filePath = `task-questions/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('media')
+          .upload(filePath, q.imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('media')
+          .getPublicUrl(filePath);
+        image_url = publicUrl;
+      }
+
       const { error } = await supabase.from("task_questions").insert({
         task_id: task.id,
         type: q.type,
@@ -165,6 +184,7 @@ export default function AdminTaskPanel() {
         points: Math.max(1, Math.min(100, q.points)),
         sort_order: questions.length,
         status: "draft",
+        image_url,
       });
       if (error) throw error;
       toast.success("Question added!");

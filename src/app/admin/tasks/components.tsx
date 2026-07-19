@@ -1,17 +1,32 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Trash2, CheckCircle, XCircle, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, MessageSquare, ChevronDown, ChevronUp, Image as ImageIcon, X } from "lucide-react";
 import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
 
 /* ── Question Form (hidden by default, toggled) ── */
-export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: string; options: string[]; correct_answer: string | null; points: number }) => void }) {
+export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: string; options: string[]; correct_answer: string | null; points: number; imageFile: File | null }) => void }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"mcq" | "coding" | "general">("mcq");
   const [text, setText] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
   const [correct, setCorrect] = useState<number | null>(null);
   const [points, setPoints] = useState(10);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  }
+
+  function clearImage() {
+    setImageFile(null);
+    setImagePreview(null);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,8 +37,9 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
       options: type === "mcq" ? options.filter(Boolean) : [],
       correct_answer: type === "mcq" && correct !== null ? String(correct) : null,
       points,
+      imageFile,
     });
-    setText(""); setOptions(["", "", "", ""]); setCorrect(null); setPoints(10);
+    setText(""); setOptions(["", "", "", ""]); setCorrect(null); setPoints(10); clearImage();
     setOpen(false);
   }
 
@@ -56,6 +72,28 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
       </div>
       <textarea value={text} onChange={e => setText(e.target.value)} required rows={3}
         className="input-field resize-none text-sm" placeholder={type === "coding" ? "Problem statement..." : "Question text..."} />
+      
+      {/* Image Upload for Question */}
+      <div>
+        {imagePreview ? (
+          <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
+            <img src={imagePreview} alt="Question Attachment Preview" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white hover:bg-black"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        ) : (
+          <label className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-gray-700 cursor-pointer w-fit p-2 rounded bg-black/5 hover:bg-black/10 transition-colors">
+            <ImageIcon className="w-4 h-4 text-[#00629B]" /> Attach Image (Optional)
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+          </label>
+        )}
+      </div>
+
       {type === "mcq" && (
         <div className="space-y-2">
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>Options (click radio to mark correct):</p>
@@ -76,6 +114,7 @@ export function QuestionForm({ onAdd }: { onAdd: (q: { type: string; text: strin
     </form>
   );
 }
+
 
 /* ── Question Card ── */
 export function QuestionCard({ q, index, onApprove, onReject, onDelete }: {
@@ -119,6 +158,13 @@ export function QuestionCard({ q, index, onApprove, onReject, onDelete }: {
         </div>
       </div>
       <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>{q.text}</p>
+      {q.image_url && (
+        <div className="mt-2 border rounded-lg overflow-hidden max-w-md bg-black/5 p-1">
+          <a href={q.image_url} target="_blank" rel="noopener noreferrer" className="block hover:opacity-90">
+            <img src={q.image_url} alt="Question Attachment" className="max-h-48 object-contain rounded" />
+          </a>
+        </div>
+      )}
       {q.type === "mcq" && q.options && Array.isArray(q.options) && (
         <div className="grid grid-cols-2 gap-1.5">
           {(q.options as string[]).map((opt: string, i: number) => (
