@@ -57,7 +57,6 @@ export default function MemberTaskPage() {
             .order("date", { ascending: false }),
           supabase.from("tasks")
             .select("id, event_id, title, type, status")
-            .eq("status", "approved")
             .in("event_id", bookedIds),
           supabase.from("task_submissions")
             .select("task_id, completed, review_status")
