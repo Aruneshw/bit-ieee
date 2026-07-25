@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useState } from "react";
 import { Send, CalendarPlus } from "lucide-react";
 import { toast } from "sonner";

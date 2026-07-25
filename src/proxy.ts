@@ -1,11 +1,11 @@
-import { updateSession } from '@/lib/supabase/middleware'
+import { updateSession } from '@/core/database/supabase/middleware'
 import { NextResponse, type NextRequest } from 'next/server'
 import {
   checkRateLimit,
   getTierForPath,
   buildFingerprint,
   logAbuse,
-} from '@/lib/rate-limiter'
+} from '@/core/utils/rate-limiter'
 
 // ---------------------------------------------------------------------------
 // Helpers

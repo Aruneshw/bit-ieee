@@ -2,13 +2,13 @@
 
 import { useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
-import { useArduinoSimulator } from "@/components/member/arduino/arduino-simulator";
-import SerialMonitor from "@/components/member/arduino/serial-monitor";
-import { exampleSketches, type ExampleSketch } from "@/components/member/arduino/example-sketches";
+import { useArduinoSimulator } from "@/modules/quiz/components/arduino/arduino-simulator";
+import SerialMonitor from "@/modules/quiz/components/arduino/serial-monitor";
+import { exampleSketches, type ExampleSketch } from "@/modules/quiz/components/arduino/example-sketches";
 
 // Dynamic imports for heavy components
 const ArduinoEditor = dynamic(
-  () => import("@/components/member/arduino/arduino-editor"),
+  () => import("@/modules/quiz/components/arduino/arduino-editor"),
   {
     ssr: false,
     loading: () => (
@@ -21,7 +21,7 @@ const ArduinoEditor = dynamic(
 );
 
 const ArduinoBoard = dynamic(
-  () => import("@/components/member/arduino/arduino-board"),
+  () => import("@/modules/quiz/components/arduino/arduino-board"),
   {
     ssr: false,
     loading: () => (

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useSessionProfile } from "@/components/session-profile-provider";
+import { createClient } from "@/core/database/supabase/client";
+import { useSessionProfile } from "@/modules/auth/components/session-profile-provider";
 import { CalendarX2, MapPin, Clock, Check, X as XIcon, Radio, RefreshCw, AlertCircle } from "lucide-react";
 
 type BookingRow = any;

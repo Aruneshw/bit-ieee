@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { AdminEventDetailEditor } from "@/components/admin/event-detail-editor";
+import { createClient } from "@/core/database/supabase/client";
+import { AdminEventDetailEditor } from "@/modules/events/components/event-detail-editor";
 import { Loader2 } from "lucide-react";
 
 export default function AdminEventDetailPage() {

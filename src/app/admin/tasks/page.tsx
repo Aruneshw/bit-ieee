@@ -1,11 +1,11 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Send, Eye, RefreshCw, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { TaskQuestion } from "@/lib/types";
-import { QuestionForm, QuestionCard, SubmissionReviewCard } from "./components";
+import type { TaskQuestion } from "@/core/types";
+import { QuestionForm, QuestionCard, SubmissionReviewCard } from "../../../modules/tasks/components/admin-tasks-components";
 
 /**
  * Admin Task Management Panel

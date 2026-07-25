@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useSessionProfile } from "@/components/session-profile-provider";
-import { QrScanModal } from "@/components/qr-scan-modal";
+import { createClient } from "@/core/database/supabase/client";
+import { useSessionProfile } from "@/modules/auth/components/session-profile-provider";
+import { QrScanModal } from "@/shared/components/qr-scan-modal";
 import QRCode from "react-qr-code";
 import {
   AlertCircle,

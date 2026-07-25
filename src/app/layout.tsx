@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Bebas_Neue } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
-import { SessionProfileProvider } from "@/components/session-profile-provider";
+import { SessionProfileProvider } from "@/modules/auth/components/session-profile-provider";
 
 const inter = Inter({
   variable: "--font-inter",

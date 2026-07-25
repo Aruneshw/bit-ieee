@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/core/database/supabase/server'
 import { redirect } from 'next/navigation'
-import { getRoleDashboardPath, needsProfileCompletion } from '@/lib/types'
-import type { UserRole } from '@/lib/types'
+import { getRoleDashboardPath, needsProfileCompletion } from '@/core/types'
+import type { UserRole } from '@/core/types'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'

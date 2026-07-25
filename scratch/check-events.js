@@ -1,30 +1,23 @@
-import { createClient } from '@supabase/supabase-js'
-import dotenv from 'dotenv'
-import path from 'path'
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 
-dotenv.config({ path: '.env.local' })
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase env vars')
-  process.exit(1)
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 async function checkEvents() {
   const { data, error } = await supabase
-    .from('events')
-    .select('*')
+    .from("events")
+    .select("id, name, status, event_date, start_time, end_time, is_ieee_official");
 
   if (error) {
-    console.error('Error fetching events:', error)
-    return
+    console.error("Error fetching events:", error);
+    return;
   }
-
-  console.log('Approved Events:', JSON.stringify(data, null, 2))
+  console.log(`Found ${data.length} total events:`);
+  console.log(data);
 }
 
-checkEvents()
+checkEvents();

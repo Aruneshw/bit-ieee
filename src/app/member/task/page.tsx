@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useState, useEffect, useCallback } from "react";
 import {
   ClipboardList, CheckCircle, Clock, Send, ArrowLeft,
@@ -8,8 +8,8 @@ import {
   Image as ImageIcon, X
 } from "lucide-react";
 import { toast } from "sonner";
-import type { TaskQuestion, SubmissionAnswer } from "@/lib/types";
-import CodingQuestionEditor from "./coding-editor";
+import type { TaskQuestion, SubmissionAnswer } from "@/core/types";
+import CodingQuestionEditor from "../../../modules/tasks/components/coding-editor";
 
 /**
  * Member Task Page

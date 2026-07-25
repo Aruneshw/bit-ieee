@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { AlertCircle, CalendarX2, Filter, RefreshCw, Search, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 

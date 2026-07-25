@@ -1,13 +1,13 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useEffect, useState, useMemo } from "react";
-import { SocietySidebar } from "@/components/member/society/panels/society-sidebar";
-import { TrendingPanel } from "@/components/member/society/panels/trending-panel";
-import { PostCreator } from "@/components/member/society/post-creator";
-import { PostCard } from "@/components/member/society/feed/post-card";
-import { AdminPanel } from "@/components/member/society/admin/admin-panel";
-import { Post } from "@/components/member/society/types";
+import { SocietySidebar } from "@/modules/society/components/panels/society-sidebar";
+import { TrendingPanel } from "@/modules/society/components/panels/trending-panel";
+import { PostCreator } from "@/modules/society/components/post-creator";
+import { PostCard } from "@/modules/society/components/feed/post-card";
+import { AdminPanel } from "@/modules/society/components/admin/admin-panel";
+import { Post } from "@/modules/society/components/types";
 import { toast } from "sonner";
 import { ShieldCheck, MessageSquare } from "lucide-react";
 

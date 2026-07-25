@@ -1,9 +1,9 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useEffect, useState } from "react";
 import { Users, ChevronDown, ChevronUp, CalendarDays, Award, TrendingUp } from "lucide-react";
-import type { Society, UserProfile, Event } from "@/lib/types";
+import type { Society, UserProfile, Event } from "@/core/types";
 
 interface SocietyDetail extends Society {
   users?: UserProfile[];

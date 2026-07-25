@@ -1,13 +1,13 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Zap, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { getRoleDashboardPath, needsProfileCompletion, ADMIN_EMAILS } from "@/lib/types";
-import type { UserRole } from "@/lib/types";
+import { getRoleDashboardPath, needsProfileCompletion, ADMIN_EMAILS } from "@/core/types";
+import type { UserRole } from "@/core/types";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   unauthorized_domain: "Only @bitsathy.ac.in email addresses are allowed.",

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import {
   AlertCircle,
   ArrowLeft,
@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { updateEventStatus } from "@/app/actions/admin-actions";
+import { updateEventStatus } from "@/modules/admin/services/admin.actions";
 
 type EventRow = any;
 type TeamRow = { member_id: string; role: string; label?: string };

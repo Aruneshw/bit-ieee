@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/core/database/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
-import { ALL_ADMIN_EMAILS, getRoleDashboardPath, needsProfileCompletion } from '@/lib/types'
-import type { UserRole } from '@/lib/types'
+import { ALL_ADMIN_EMAILS, getRoleDashboardPath, needsProfileCompletion } from '@/core/types'
+import type { UserRole } from '@/core/types'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'

@@ -1,5 +1,5 @@
 "use client";
-import { AboutIEEE } from "@/components/about-ieee";
+import { AboutIEEE } from "@/modules/events/components/about-ieee";
 export default function AboutPage() {
   return <AboutIEEE />;
 }

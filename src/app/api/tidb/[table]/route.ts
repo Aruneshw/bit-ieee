@@ -8,9 +8,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import db from '@/lib/db'
-import { isTiDBConfigured } from '@/lib/tidb'
+import { createClient } from '@/core/database/supabase/server'
+import db from '@/core/database/db'
+import { isTiDBConfigured } from '@/core/database/tidb'
 
 // Allowed tables (whitelist for security)
 const ALLOWED_TABLES = [

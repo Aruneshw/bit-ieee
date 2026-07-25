@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useSessionProfile } from "@/components/session-profile-provider";
+import { createClient } from "@/core/database/supabase/client";
+import { useSessionProfile } from "@/modules/auth/components/session-profile-provider";
 import {
   Calendar, CalendarX2, ChevronDown, ChevronUp, Clock, MapPin, User, X,
   AlertCircle, RefreshCw, Loader2,
@@ -655,7 +655,7 @@ function EventDrawer({ event, onClose }: { event: EventRow | null; onClose: () =
   );
 }
 
-import { CreateActivityForm } from "@/components/member/activity";
+import { CreateActivityForm } from "@/modules/events/components/activity";
 
 // The legacy CreateActivityForm was removed and replaced with the modular version above.
 

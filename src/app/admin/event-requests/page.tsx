@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { AlertCircle, ArrowUpDown, CalendarX2, Loader2, RefreshCw } from "lucide-react";
 
 type Row = any;

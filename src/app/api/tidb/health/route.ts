@@ -5,8 +5,8 @@
  */
 
 import { NextResponse } from 'next/server'
-import { testConnection, isTiDBConfigured } from '@/lib/tidb'
-import { query } from '@/lib/tidb'
+import { testConnection, isTiDBConfigured } from '@/core/database/tidb'
+import { query } from '@/core/database/tidb'
 import { RowDataPacket } from 'mysql2/promise'
 
 export async function GET() {

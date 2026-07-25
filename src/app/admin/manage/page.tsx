@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useEffect, useState } from "react";
 import { Plus, Users, Upload, CheckCircle, AlertCircle, Download, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";

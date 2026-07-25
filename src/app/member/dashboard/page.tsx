@@ -1,9 +1,9 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useEffect, useState } from "react";
 import { Award, Activity, Sparkles, X } from "lucide-react";
-import { useSessionProfile } from "@/components/session-profile-provider";
+import { useSessionProfile } from "@/modules/auth/components/session-profile-provider";
 
 export default function MemberDashboard() {
   const supabase = createClient();

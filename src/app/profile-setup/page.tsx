@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/core/database/supabase/client";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
@@ -12,8 +12,8 @@ import {
   Lock, Calendar, Phone, Mail, Building2, Hash, Globe,
   GitFork, Link2, X, Plus, Loader2, Check, AlertCircle,
 } from "lucide-react";
-import { DEPARTMENTS, SKILL_OPTIONS, getRoleDashboardPath } from "@/lib/types";
-import type { UserRole } from "@/lib/types";
+import { DEPARTMENTS, SKILL_OPTIONS, getRoleDashboardPath } from "@/core/types";
+import type { UserRole } from "@/core/types";
 
 // ────────────────────────────────────────────
 // ZOD VALIDATION SCHEMAS (per step)
